@@ -113,7 +113,7 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var shortUrl []byte
+			var shortURL []byte
 
 			if test.preRequest != "" {
 				request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.preRequest))
@@ -124,10 +124,10 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 				res := w.Result()
 				// получаем и проверяем тело запроса
 				defer res.Body.Close()
-				shortUrl, _ = io.ReadAll(res.Body)
+				shortURL, _ = io.ReadAll(res.Body)
 			}
 
-			target := string(shortUrl)
+			target := string(shortURL)
 			if target == "" {
 				target = "/"
 			}
