@@ -28,13 +28,22 @@ func (us *URLShortener) HandleShorten(res http.ResponseWriter, req *http.Request
 	originalURL, err := io.ReadAll(req.Body)
 
 	if err != nil {
-		panic(err)
+		http.Error(res, "can't read body. internal error",
+			http.StatusInternalServerError)
+		return
+	}
+
+	if string(originalURL) == "" {
+		http.Error(res, "empty url",
+			http.StatusBadRequest)
+		return
 	}
 
 	// Generate a unique shortened key for the original URL
 	shortKey := generateShortKey()
 	us.urls[shortKey] = string(originalURL)
 
+	res.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	res.WriteHeader(http.StatusCreated)
 	// TODO как получить текущий протокол из запроса?
 	res.Write([]byte("http://" + req.Host + "/" + shortKey))
