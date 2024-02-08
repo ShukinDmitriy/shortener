@@ -1,9 +1,15 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/gommon/log"
 	"io"
 	"math/rand"
 	"net/http"
+	"os"
+	"os/signal"
 	"time"
 )
 
@@ -24,73 +30,72 @@ func generateShortKey() string {
 	return string(shortKey)
 }
 
-func (us *URLShortener) HandleShorten(res http.ResponseWriter, req *http.Request) {
-	originalURL, err := io.ReadAll(req.Body)
+func (us *URLShortener) HandleShorten(ctx echo.Context) error {
+	originalURL, err := io.ReadAll(ctx.Request().Body)
 
 	if err != nil {
-		http.Error(res, "can't read body. internal error",
-			http.StatusInternalServerError)
-		return
+		ctx.Logger().Error(err)
+		return echo.NewHTTPError(http.StatusBadRequest, "can't read body. internal error")
 	}
 
 	if string(originalURL) == "" {
-		http.Error(res, "empty url",
-			http.StatusBadRequest)
-		return
+		err := "empty url"
+		ctx.Logger().Error(err)
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	// Generate a unique shortened key for the original URL
 	shortKey := generateShortKey()
 	us.urls[shortKey] = string(originalURL)
 
-	res.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	res.WriteHeader(http.StatusCreated)
-	// TODO как получить текущий протокол из запроса?
-	res.Write([]byte("http://" + req.Host + "/" + shortKey))
+	ctx.Response().Header().Set("Content-Type", "text/plain; charset=utf-8")
+	return ctx.String(http.StatusCreated, "http://"+ctx.Request().Host+"/"+shortKey)
 }
 
-func (us *URLShortener) HandleRedirect(res http.ResponseWriter, req *http.Request) {
-	shortKey := req.URL.Path[len("/"):]
+func (us *URLShortener) HandleRedirect(ctx echo.Context) error {
+	shortKey := ctx.Param("id")
 
 	if shortKey == "" {
-		http.Error(res, "", http.StatusBadRequest)
-		return
+		ctx.Logger().Error("empty id")
+		return echo.NewHTTPError(http.StatusBadRequest, "")
 	}
 
 	// Retrieve the original URL from the `urls` map using the shortened key
 	originalURL, found := us.urls[shortKey]
 	if !found {
-		http.Error(res, "", http.StatusBadRequest)
+		err := "URL not found"
+		ctx.Logger().Error(err)
+		return echo.NewHTTPError(http.StatusNotFound, err)
 	}
 
-	http.Redirect(res, req, originalURL, http.StatusTemporaryRedirect)
+	return ctx.Redirect(http.StatusTemporaryRedirect, originalURL)
 }
 
 var shortener = &URLShortener{
 	urls: make(map[string]string),
 }
 
-func mainHandler(res http.ResponseWriter, req *http.Request) {
-	if req.Method == http.MethodGet {
-		shortener.HandleRedirect(res, req)
-		return
-	}
-
-	if req.Method == http.MethodPost {
-		shortener.HandleShorten(res, req)
-		return
-	}
-
-	http.Error(res, "", http.StatusBadRequest)
-}
-
 func main() {
+	e := echo.New()
+	e.Logger.SetLevel(log.INFO)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc(`/`, mainHandler)
+	e.GET("/:id", shortener.HandleRedirect)
+	e.POST("/", shortener.HandleShorten)
 
-	err := http.ListenAndServe(`:8080`, mux)
-	if err != nil {
-		panic(err)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	// Start server
+	go func() {
+		if err := e.Start(":8080"); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			e.Logger.Fatal("shutting down the server")
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 10 seconds.
+	<-ctx.Done()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := e.Shutdown(ctx); err != nil {
+		e.Logger.Fatal(err)
 	}
 }

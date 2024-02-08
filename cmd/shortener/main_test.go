@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -34,7 +36,7 @@ func TestURLShortener_HandleShorten(t *testing.T) {
 			name: "negative test #1",
 			want: want{
 				code:        400,
-				response:    "empty url\n",
+				response:    "empty url",
 				contentType: "text/plain; charset=utf-8",
 			},
 			body: "",
@@ -45,23 +47,37 @@ func TestURLShortener_HandleShorten(t *testing.T) {
 		urls: make(map[string]string),
 	}
 
+	e := echo.New()
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.body))
-			// создаём новый Recorder
-			w := httptest.NewRecorder()
-			shortener.HandleShorten(w, request)
+			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.body))
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
 
-			res := w.Result()
-			// проверяем код ответа
-			assert.Equal(t, test.want.code, res.StatusCode)
-			// получаем и проверяем тело запроса
-			defer res.Body.Close()
-			resBody, err := io.ReadAll(res.Body)
+			err := shortener.HandleShorten(c)
 
-			require.NoError(t, err)
-			assert.Contains(t, string(resBody), test.want.response)
-			assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
+			// Assertions
+			if err != nil {
+				res, ok := err.(*echo.HTTPError)
+
+				require.NotNil(t, ok)
+				assert.Equal(t, test.want.code, res.Code)
+
+				resBody := res.Message
+				assert.Contains(t, resBody, test.want.response)
+			} else {
+				res := rec.Result()
+
+				assert.Equal(t, test.want.code, res.StatusCode)
+
+				defer res.Body.Close()
+				resBody, err := io.ReadAll(res.Body)
+
+				require.NoError(t, err)
+				assert.Contains(t, string(resBody), test.want.response)
+				assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
+			}
 		})
 	}
 }
@@ -82,8 +98,8 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 			name: "positive test #1",
 			want: want{
 				code:        307,
-				response:    "<a href=\"https://yandex.ru\">Temporary Redirect</a>.\n\n",
-				contentType: "text/html; charset=utf-8",
+				response:    "https://yandex.ru",
+				contentType: "",
 			},
 			preRequest: "https://yandex.ru",
 		},
@@ -91,15 +107,15 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 			name: "negative test #1",
 			want: want{
 				code:        400,
-				response:    "\n",
+				response:    "",
 				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
 			name: "negative test #2",
 			want: want{
-				code:        400,
-				response:    "\n",
+				code:        404,
+				response:    "URL not found",
 				contentType: "text/plain; charset=utf-8",
 			},
 			preRequest: "https://yandex.ru",
@@ -111,18 +127,22 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 		urls: make(map[string]string),
 	}
 
+	e := echo.New()
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			var shortURL []byte
 
 			if test.preRequest != "" {
-				request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.preRequest))
-				// создаём новый Recorder
-				w := httptest.NewRecorder()
-				shortener.HandleShorten(w, request)
+				req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.preRequest))
 
-				res := w.Result()
-				// получаем и проверяем тело запроса
+				rec := httptest.NewRecorder()
+				c := e.NewContext(req, rec)
+
+				shortener.HandleShorten(c)
+
+				res := rec.Result()
+
 				defer res.Body.Close()
 				shortURL, _ = io.ReadAll(res.Body)
 			}
@@ -134,21 +154,39 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 			if test.target != "" {
 				target = test.target
 			}
-			request := httptest.NewRequest(http.MethodGet, target, nil)
+
+			fmt.Println(target)
+
+			req := httptest.NewRequest(http.MethodGet, target, nil)
 			// создаём новый Recorder
-			w := httptest.NewRecorder()
-			shortener.HandleRedirect(w, request)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			if len(target) > 6 {
+				c.SetPath("/:id")
+				c.SetParamNames("id")
+				c.SetParamValues(target[len(target)-6:])
+			}
 
-			res := w.Result()
-			// проверяем код ответа
-			assert.Equal(t, test.want.code, res.StatusCode)
-			// получаем и проверяем тело запроса
-			defer res.Body.Close()
-			resBody, err := io.ReadAll(res.Body)
+			err := shortener.HandleRedirect(c)
 
-			require.NoError(t, err)
-			assert.Equal(t, test.want.response, string(resBody))
-			assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
+			// Assertions
+			if err != nil {
+				res, ok := err.(*echo.HTTPError)
+
+				require.NotNil(t, ok)
+				assert.Equal(t, test.want.code, res.Code)
+
+				resBody := res.Message
+				assert.Contains(t, resBody, test.want.response)
+			} else {
+				res := rec.Result()
+
+				assert.Equal(t, test.want.code, res.StatusCode)
+
+				require.NoError(t, err)
+				assert.Contains(t, res.Header.Get("Location"), test.want.response)
+				assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
+			}
 		})
 	}
 
