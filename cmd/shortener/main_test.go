@@ -180,6 +180,7 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 				assert.Contains(t, resBody, test.want.response)
 			} else {
 				res := rec.Result()
+				defer res.Body.Close()
 
 				assert.Equal(t, test.want.code, res.StatusCode)
 
