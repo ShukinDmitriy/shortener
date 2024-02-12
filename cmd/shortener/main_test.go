@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -154,8 +153,6 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 			if test.target != "" {
 				target = test.target
 			}
-
-			fmt.Println(target)
 
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			// создаём новый Recorder

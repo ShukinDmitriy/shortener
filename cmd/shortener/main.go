@@ -49,7 +49,16 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	us.urls[shortKey] = string(originalURL)
 
 	ctx.Response().Header().Set("Content-Type", "text/plain; charset=utf-8")
-	return ctx.String(http.StatusCreated, "http://"+ctx.Request().Host+"/"+shortKey)
+
+	var host string
+
+	if flagBaseAddr != "" {
+		host = flagBaseAddr
+	} else {
+		host = ctx.Request().Host
+	}
+
+	return ctx.String(http.StatusCreated, "http://"+host+"/"+shortKey)
 }
 
 func (us *URLShortener) HandleRedirect(ctx echo.Context) error {
@@ -76,6 +85,8 @@ var shortener = &URLShortener{
 }
 
 func main() {
+	parseFlags()
+
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)
 
@@ -86,7 +97,7 @@ func main() {
 	defer stop()
 	// Start server
 	go func() {
-		if err := e.Start(":8080"); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := e.Start(flagRunAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			e.Logger.Fatal("shutting down the server")
 		}
 	}()
