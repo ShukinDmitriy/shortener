@@ -55,10 +55,10 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	if flagBaseAddr != "" {
 		host = flagBaseAddr
 	} else {
-		host = ctx.Request().Host
+		host = "http://" + ctx.Request().Host
 	}
 
-	return ctx.String(http.StatusCreated, "http://"+host+"/"+shortKey)
+	return ctx.String(http.StatusCreated, host+"/"+shortKey)
 }
 
 func (us *URLShortener) HandleRedirect(ctx echo.Context) error {
