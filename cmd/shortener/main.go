@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/ShukinDmitriy/shortener/internal/logger"
+	"github.com/ShukinDmitriy/shortener/internal/middleware"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
+	"go.uber.org/zap"
 	"io"
 	"math/rand"
 	"net/http"
@@ -87,8 +90,23 @@ var shortener = &URLShortener{
 func main() {
 	parseFlags()
 
+	if err := logger.Initialize(flagLogLevel); err != nil {
+		return
+	}
+
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)
+
+	//-------------------
+	// Custom middleware
+	//-------------------
+	// ResponseInfo
+	resInfo := middleware.NewResponseInfo(logger.Log)
+	e.Use(resInfo.Process)
+
+	// RequestInfo
+	reqInfo := middleware.NewRequestInfo(logger.Log)
+	e.Use(reqInfo.Process)
 
 	e.GET("/:id", shortener.HandleRedirect)
 	e.POST("/", shortener.HandleShorten)
@@ -100,6 +118,8 @@ func main() {
 		if err := e.Start(flagRunAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			e.Logger.Fatal("shutting down the server")
 		}
+
+		logger.Log.Info("Running server", zap.String("address", flagRunAddr))
 	}()
 
 	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 10 seconds.
