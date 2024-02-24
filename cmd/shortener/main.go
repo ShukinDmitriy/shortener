@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/ShukinDmitriy/shortener/internal/logger"
 	"github.com/ShukinDmitriy/shortener/internal/middleware"
+	"github.com/ShukinDmitriy/shortener/internal/models"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
 	"go.uber.org/zap"
@@ -64,6 +66,44 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	return ctx.String(http.StatusCreated, host+"/"+shortKey)
 }
 
+func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
+	// десериализуем запрос в структуру модели
+	logger.Log.Debug("decoding request")
+	var req models.CreateRequest
+	dec := json.NewDecoder(ctx.Request().Body)
+	if err := dec.Decode(&req); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, "invalid JSON")
+	}
+
+	// проверяем, что пришёл запрос понятного типа
+	if string(req.Url) == "" {
+		err := "empty url"
+		ctx.Logger().Error(err)
+		logger.Log.Debug("unsupported request url", zap.String("url", req.Url))
+		return echo.NewHTTPError(http.StatusBadRequest, err)
+	}
+
+	// Generate a unique shortened key for the original URL
+	shortKey := generateShortKey()
+	us.urls[shortKey] = string(req.Url)
+
+	var host string
+
+	if flagBaseAddr != "" {
+		host = flagBaseAddr
+	} else {
+		host = "http://" + ctx.Request().Host
+	}
+
+	// заполняем модель ответа
+	resp := models.CreateResponse{
+		Result: host + "/" + shortKey,
+	}
+
+	return ctx.JSON(http.StatusCreated, resp)
+}
+
 func (us *URLShortener) HandleRedirect(ctx echo.Context) error {
 	shortKey := ctx.Param("id")
 
@@ -110,6 +150,7 @@ func main() {
 
 	e.GET("/:id", shortener.HandleRedirect)
 	e.POST("/", shortener.HandleShorten)
+	e.POST("/api/shorten", shortener.HandleCreateShorten)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
