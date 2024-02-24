@@ -77,16 +77,16 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 	}
 
 	// проверяем, что пришёл запрос понятного типа
-	if string(req.Url) == "" {
+	if string(req.URL) == "" {
 		err := "empty url"
 		ctx.Logger().Error(err)
-		logger.Log.Debug("unsupported request url", zap.String("url", req.Url))
+		logger.Log.Debug("unsupported request url", zap.String("url", req.URL))
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	// Generate a unique shortened key for the original URL
 	shortKey := generateShortKey()
-	us.urls[shortKey] = string(req.Url)
+	us.urls[shortKey] = string(req.URL)
 
 	var host string
 
