@@ -2,6 +2,7 @@ POST http://localhost:8080/api/shorten HTTP/1.1
 Host: localhost:8080
 Content-Type: application/json
 Accept: application/json
+Accept-Encoding: deflate, gzip;q=1.0, *;q=0.5
 
 {
   "url": "https://practicum.yandex.ru"

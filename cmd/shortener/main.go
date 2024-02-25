@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/ShukinDmitriy/shortener/internal/logger"
-	"github.com/ShukinDmitriy/shortener/internal/middleware"
+	internalMiddleware "github.com/ShukinDmitriy/shortener/internal/middleware"
 	"github.com/ShukinDmitriy/shortener/internal/models"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 	"go.uber.org/zap"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 )
 
@@ -141,12 +143,49 @@ func main() {
 	// Custom middleware
 	//-------------------
 	// ResponseInfo
-	resInfo := middleware.NewResponseInfo(logger.Log)
+	resInfo := internalMiddleware.NewResponseInfo(logger.Log)
 	e.Use(resInfo.Process)
 
 	// RequestInfo
-	reqInfo := middleware.NewRequestInfo(logger.Log)
+	reqInfo := internalMiddleware.NewRequestInfo(logger.Log)
 	e.Use(reqInfo.Process)
+
+	// gzip Отдавать сжатый ответ клиенту, который поддерживает обработку
+	// сжатых ответов (с HTTP-заголовком Accept-Encoding)
+	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
+		Skipper: func(c echo.Context) bool {
+			skipByAcceptEncodingHeader := true
+			skipByContentTypeHeader := true
+
+			acceptEncodingRaw := c.Request().Header.Get("Accept-Encoding")
+			acceptEncodingValues := strings.Split(acceptEncodingRaw, ",")
+
+			for _, value := range acceptEncodingValues {
+				parts := strings.Split(value, ";")
+				format := strings.TrimSpace(parts[0])
+
+				if format == "gzip" {
+					skipByAcceptEncodingHeader = false
+					break
+				}
+			}
+
+			contentTypeRaw := c.Request().Header.Get("Content-Type")
+			contentTypeValues := strings.Split(contentTypeRaw, ",")
+
+			for _, value := range contentTypeValues {
+				if value == "application/json" || value == "text/html" {
+					skipByContentTypeHeader = false
+					break
+				}
+			}
+
+			return skipByAcceptEncodingHeader && skipByContentTypeHeader
+		},
+	}))
+
+	// decompress
+	e.Use(middleware.DecompressWithConfig(middleware.DecompressConfig{}))
 
 	e.GET("/:id", shortener.HandleRedirect)
 	e.POST("/", shortener.HandleShorten)
