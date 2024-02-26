@@ -33,9 +33,7 @@ func NewProducer(filename string) (*Producer, error) {
 
 		// создаем директорию, если она не существует
 		if err := os.MkdirAll(directory, 0755); err != nil {
-			if err != nil {
-				return nil, err
-			}
+			return nil, err
 		}
 	}
 
