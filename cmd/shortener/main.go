@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/ShukinDmitriy/shortener/internal/logger"
 	internalMiddleware "github.com/ShukinDmitriy/shortener/internal/middleware"
 	"github.com/ShukinDmitriy/shortener/internal/models"
@@ -37,6 +38,65 @@ func generateShortKey() string {
 	return string(shortKey)
 }
 
+func saveShortKey(us *URLShortener, shortKey string, originalURL string) {
+	// Хранение в памяти
+	us.urls[shortKey] = originalURL
+
+	if models.DBProducer == nil {
+		return
+	}
+
+	// Хранение в файле
+	models.DBProducer.WriteEvent(&models.Event{
+		ShortKey:    shortKey,
+		OriginalURL: originalURL,
+	})
+}
+
+func getOriginalURL(us *URLShortener, shortKey string) (string, bool) {
+	// Поиск в памяти
+	var originalURL string
+	var event *models.Event
+	var found bool = false
+	var err error
+
+	originalURL, found = us.urls[shortKey]
+
+	if models.DBConsumer == nil {
+		return originalURL, found
+	}
+
+	// Поиск в файле
+	defer models.DBConsumer.Close()
+
+	for {
+		event, err = models.DBConsumer.ReadEvent()
+
+		if err != nil {
+			return originalURL, found
+		}
+
+		// Сохраняем значение в память, т.к. повторно файл не вычитывается
+		us.urls[event.ShortKey] = event.OriginalURL
+
+		if event.ShortKey == shortKey {
+			return event.OriginalURL, true
+		}
+	}
+}
+
+func prepareFullURL(shortKey string, ctx echo.Context) string {
+	var host string
+
+	if flagBaseAddr != "" {
+		host = flagBaseAddr
+	} else {
+		host = "http://" + ctx.Request().Host
+	}
+
+	return host + "/" + shortKey
+}
+
 func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	originalURL, err := io.ReadAll(ctx.Request().Body)
 
@@ -53,19 +113,12 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 
 	// Generate a unique shortened key for the original URL
 	shortKey := generateShortKey()
-	us.urls[shortKey] = string(originalURL)
+	saveShortKey(us, shortKey, string(originalURL))
+	result := prepareFullURL(shortKey, ctx)
 
 	ctx.Response().Header().Set("Content-Type", "text/plain; charset=utf-8")
 
-	var host string
-
-	if flagBaseAddr != "" {
-		host = flagBaseAddr
-	} else {
-		host = "http://" + ctx.Request().Host
-	}
-
-	return ctx.String(http.StatusCreated, host+"/"+shortKey)
+	return ctx.String(http.StatusCreated, result)
 }
 
 func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
@@ -88,19 +141,11 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 
 	// Generate a unique shortened key for the original URL
 	shortKey := generateShortKey()
-	us.urls[shortKey] = string(req.URL)
-
-	var host string
-
-	if flagBaseAddr != "" {
-		host = flagBaseAddr
-	} else {
-		host = "http://" + ctx.Request().Host
-	}
+	saveShortKey(us, shortKey, req.URL)
 
 	// заполняем модель ответа
 	resp := models.CreateResponse{
-		Result: host + "/" + shortKey,
+		Result: prepareFullURL(shortKey, ctx),
 	}
 
 	return ctx.JSON(http.StatusCreated, resp)
@@ -115,7 +160,7 @@ func (us *URLShortener) HandleRedirect(ctx echo.Context) error {
 	}
 
 	// Retrieve the original URL from the `urls` map using the shortened key
-	originalURL, found := us.urls[shortKey]
+	originalURL, found := getOriginalURL(us, shortKey)
 	if !found {
 		err := "URL not found"
 		ctx.Logger().Error(err)
@@ -133,6 +178,11 @@ func main() {
 	parseFlags()
 
 	if err := logger.Initialize(flagLogLevel); err != nil {
+		return
+	}
+
+	if err := models.Initialize(flagFileStoragePath); err != nil {
+		fmt.Println(err)
 		return
 	}
 
