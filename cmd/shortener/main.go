@@ -57,7 +57,7 @@ func getOriginalURL(us *URLShortener, shortKey string) (string, bool) {
 	// Поиск в памяти
 	var originalURL string
 	var event *models.Event
-	var found bool = false
+	var found = false
 	var err error
 
 	originalURL, found = us.urls[shortKey]
