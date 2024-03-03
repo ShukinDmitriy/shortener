@@ -53,36 +53,39 @@ func saveShortKey(us *URLShortener, shortKey string, originalURL string) {
 	})
 }
 
-func getOriginalURL(us *URLShortener, shortKey string) (string, bool) {
-	// Поиск в памяти
-	var originalURL string
+func initMapFromDB(us *URLShortener) {
 	var event *models.Event
-	var found = false
 	var err error
 
-	originalURL, found = us.urls[shortKey]
-
 	if models.DBConsumer == nil {
-		return originalURL, found
+		return
 	}
 
-	// Поиск в файле
 	defer models.DBConsumer.Close()
 
 	for {
 		event, err = models.DBConsumer.ReadEvent()
 
-		if err != nil {
-			return originalURL, found
+		if event == nil || err != nil {
+			return
 		}
+
+		fmt.Println(event)
 
 		// Сохраняем значение в память, т.к. повторно файл не вычитывается
 		us.urls[event.ShortKey] = event.OriginalURL
-
-		if event.ShortKey == shortKey {
-			return event.OriginalURL, true
-		}
 	}
+
+}
+
+func getOriginalURL(us *URLShortener, shortKey string) (string, bool) {
+	// Поиск в памяти
+	var originalURL string
+	var found = false
+
+	originalURL, found = us.urls[shortKey]
+
+	return originalURL, found
 }
 
 func prepareFullURL(shortKey string, ctx echo.Context) string {
@@ -185,6 +188,8 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+
+	initMapFromDB(shortener)
 
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)
