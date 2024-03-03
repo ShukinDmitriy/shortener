@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -29,7 +30,7 @@ func NewProducer(filename string) (*Producer, error) {
 	dirPaths := strings.Split(filename, string(filepath.Separator))
 
 	if len(dirPaths) > 1 {
-		directory := strings.Join(dirPaths[0:len(dirPaths)-1], "/")
+		directory := path.Join(dirPaths[0 : len(dirPaths)-1]...)
 
 		// создаем директорию, если она не существует
 		if err := os.MkdirAll(directory, 0755); err != nil {
