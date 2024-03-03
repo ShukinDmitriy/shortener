@@ -193,12 +193,10 @@ func main() {
 	// Custom middleware
 	//-------------------
 	// ResponseInfo
-	resInfo := internalMiddleware.NewResponseInfo(zap.L())
-	e.Use(resInfo.Process)
+	e.Use(internalMiddleware.ResponseInfo(zap.L()))
 
 	// RequestInfo
-	reqInfo := internalMiddleware.NewRequestInfo(zap.L())
-	e.Use(reqInfo.Process)
+	e.Use(internalMiddleware.RequestInfo(zap.L()))
 
 	// gzip Отдавать сжатый ответ клиенту, который поддерживает обработку
 	// сжатых ответов (с HTTP-заголовком Accept-Encoding)
