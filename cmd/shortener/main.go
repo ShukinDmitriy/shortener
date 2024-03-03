@@ -123,11 +123,11 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 
 func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 	// десериализуем запрос в структуру модели
-	logger.Log.Debug("decoding request")
+	zap.L().Debug("decoding request")
 	var req models.CreateRequest
 	dec := json.NewDecoder(ctx.Request().Body)
 	if err := dec.Decode(&req); err != nil {
-		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		zap.L().Debug("cannot decode request JSON body", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "invalid JSON")
 	}
 
@@ -135,7 +135,7 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 	if string(req.URL) == "" {
 		err := "empty url"
 		ctx.Logger().Error(err)
-		logger.Log.Debug("unsupported request url", zap.String("url", req.URL))
+		zap.L().Debug("unsupported request url", zap.String("url", req.URL))
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
@@ -193,11 +193,11 @@ func main() {
 	// Custom middleware
 	//-------------------
 	// ResponseInfo
-	resInfo := internalMiddleware.NewResponseInfo(logger.Log)
+	resInfo := internalMiddleware.NewResponseInfo(zap.L())
 	e.Use(resInfo.Process)
 
 	// RequestInfo
-	reqInfo := internalMiddleware.NewRequestInfo(logger.Log)
+	reqInfo := internalMiddleware.NewRequestInfo(zap.L())
 	e.Use(reqInfo.Process)
 
 	// gzip Отдавать сжатый ответ клиенту, который поддерживает обработку
@@ -249,7 +249,7 @@ func main() {
 			e.Logger.Fatal("shutting down the server")
 		}
 
-		logger.Log.Info("Running server", zap.String("address", flagRunAddr))
+		zap.L().Info("Running server", zap.String("address", flagRunAddr))
 	}()
 
 	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 10 seconds.
