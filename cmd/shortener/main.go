@@ -2,14 +2,22 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/ShukinDmitriy/shortener/internal/logger"
+	internalMiddleware "github.com/ShukinDmitriy/shortener/internal/middleware"
+	"github.com/ShukinDmitriy/shortener/internal/models"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
+	"go.uber.org/zap"
 	"io"
 	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 )
 
@@ -30,6 +38,68 @@ func generateShortKey() string {
 	return string(shortKey)
 }
 
+func saveShortKey(us *URLShortener, shortKey string, originalURL string) {
+	// Хранение в памяти
+	us.urls[shortKey] = originalURL
+
+	if models.DBProducer == nil {
+		return
+	}
+
+	// Хранение в файле
+	models.DBProducer.WriteEvent(&models.Event{
+		ShortKey:    shortKey,
+		OriginalURL: originalURL,
+	})
+}
+
+func initMapFromDB(us *URLShortener) {
+	var event *models.Event
+	var err error
+
+	if models.DBConsumer == nil {
+		return
+	}
+
+	defer models.DBConsumer.Close()
+
+	for {
+		event, err = models.DBConsumer.ReadEvent()
+
+		if event == nil || err != nil {
+			return
+		}
+
+		fmt.Println(event)
+
+		// Сохраняем значение в память, т.к. повторно файл не вычитывается
+		us.urls[event.ShortKey] = event.OriginalURL
+	}
+
+}
+
+func getOriginalURL(us *URLShortener, shortKey string) (string, bool) {
+	// Поиск в памяти
+	var originalURL string
+	var found = false
+
+	originalURL, found = us.urls[shortKey]
+
+	return originalURL, found
+}
+
+func prepareFullURL(shortKey string, ctx echo.Context) string {
+	var host string
+
+	if flagBaseAddr != "" {
+		host = flagBaseAddr
+	} else {
+		host = "http://" + ctx.Request().Host
+	}
+
+	return host + "/" + shortKey
+}
+
 func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	originalURL, err := io.ReadAll(ctx.Request().Body)
 
@@ -46,19 +116,42 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 
 	// Generate a unique shortened key for the original URL
 	shortKey := generateShortKey()
-	us.urls[shortKey] = string(originalURL)
+	saveShortKey(us, shortKey, string(originalURL))
+	result := prepareFullURL(shortKey, ctx)
 
 	ctx.Response().Header().Set("Content-Type", "text/plain; charset=utf-8")
 
-	var host string
+	return ctx.String(http.StatusCreated, result)
+}
 
-	if flagBaseAddr != "" {
-		host = flagBaseAddr
-	} else {
-		host = "http://" + ctx.Request().Host
+func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
+	// десериализуем запрос в структуру модели
+	zap.L().Debug("decoding request")
+	var req models.CreateRequest
+	dec := json.NewDecoder(ctx.Request().Body)
+	if err := dec.Decode(&req); err != nil {
+		zap.L().Debug("cannot decode request JSON body", zap.Error(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, "invalid JSON")
 	}
 
-	return ctx.String(http.StatusCreated, host+"/"+shortKey)
+	// проверяем, что пришёл запрос понятного типа
+	if string(req.URL) == "" {
+		err := "empty url"
+		ctx.Logger().Error(err)
+		zap.L().Debug("unsupported request url", zap.String("url", req.URL))
+		return echo.NewHTTPError(http.StatusBadRequest, err)
+	}
+
+	// Generate a unique shortened key for the original URL
+	shortKey := generateShortKey()
+	saveShortKey(us, shortKey, req.URL)
+
+	// заполняем модель ответа
+	resp := models.CreateResponse{
+		Result: prepareFullURL(shortKey, ctx),
+	}
+
+	return ctx.JSON(http.StatusCreated, resp)
 }
 
 func (us *URLShortener) HandleRedirect(ctx echo.Context) error {
@@ -70,7 +163,7 @@ func (us *URLShortener) HandleRedirect(ctx echo.Context) error {
 	}
 
 	// Retrieve the original URL from the `urls` map using the shortened key
-	originalURL, found := us.urls[shortKey]
+	originalURL, found := getOriginalURL(us, shortKey)
 	if !found {
 		err := "URL not found"
 		ctx.Logger().Error(err)
@@ -87,11 +180,69 @@ var shortener = &URLShortener{
 func main() {
 	parseFlags()
 
+	if err := logger.Initialize(flagLogLevel); err != nil {
+		return
+	}
+
+	if err := models.Initialize(flagFileStoragePath); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	initMapFromDB(shortener)
+
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)
 
+	//-------------------
+	// Custom middleware
+	//-------------------
+	// ResponseInfo
+	e.Use(internalMiddleware.ResponseInfo(zap.L()))
+
+	// RequestInfo
+	e.Use(internalMiddleware.RequestInfo(zap.L()))
+
+	// gzip Отдавать сжатый ответ клиенту, который поддерживает обработку
+	// сжатых ответов (с HTTP-заголовком Accept-Encoding)
+	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
+		Skipper: func(c echo.Context) bool {
+			skipByAcceptEncodingHeader := true
+			skipByContentTypeHeader := true
+
+			acceptEncodingRaw := c.Request().Header.Get("Accept-Encoding")
+			acceptEncodingValues := strings.Split(acceptEncodingRaw, ",")
+
+			for _, value := range acceptEncodingValues {
+				parts := strings.Split(value, ";")
+				format := strings.TrimSpace(parts[0])
+
+				if format == "gzip" {
+					skipByAcceptEncodingHeader = false
+					break
+				}
+			}
+
+			contentTypeRaw := c.Request().Header.Get("Content-Type")
+			contentTypeValues := strings.Split(contentTypeRaw, ",")
+
+			for _, value := range contentTypeValues {
+				if value == "application/json" || value == "text/html" {
+					skipByContentTypeHeader = false
+					break
+				}
+			}
+
+			return skipByAcceptEncodingHeader && skipByContentTypeHeader
+		},
+	}))
+
+	// decompress
+	e.Use(middleware.DecompressWithConfig(middleware.DecompressConfig{}))
+
 	e.GET("/:id", shortener.HandleRedirect)
 	e.POST("/", shortener.HandleShorten)
+	e.POST("/api/shorten", shortener.HandleCreateShorten)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -100,6 +251,8 @@ func main() {
 		if err := e.Start(flagRunAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			e.Logger.Fatal("shutting down the server")
 		}
+
+		zap.L().Info("Running server", zap.String("address", flagRunAddr))
 	}()
 
 	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 10 seconds.
