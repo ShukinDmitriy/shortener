@@ -2,17 +2,16 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/ShukinDmitriy/shortener/internal/logger"
 	internalMiddleware "github.com/ShukinDmitriy/shortener/internal/middleware"
 	"github.com/ShukinDmitriy/shortener/internal/models"
+	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 	"go.uber.org/zap"
-	"io"
 	"math/rand"
 	"net/http"
 	"os"
@@ -20,10 +19,6 @@ import (
 	"strings"
 	"time"
 )
-
-type URLShortener struct {
-	urls map[string]string
-}
 
 func generateShortKey() string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -70,8 +65,6 @@ func initMapFromDB(us *URLShortener) {
 			return
 		}
 
-		fmt.Println(event)
-
 		// Сохраняем значение в память, т.к. повторно файл не вычитывается
 		us.urls[event.ShortKey] = event.OriginalURL
 	}
@@ -100,83 +93,6 @@ func prepareFullURL(shortKey string, ctx echo.Context) string {
 	return host + "/" + shortKey
 }
 
-func (us *URLShortener) HandleShorten(ctx echo.Context) error {
-	originalURL, err := io.ReadAll(ctx.Request().Body)
-
-	if err != nil {
-		ctx.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusBadRequest, "can't read body. internal error")
-	}
-
-	if string(originalURL) == "" {
-		err := "empty url"
-		ctx.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusBadRequest, err)
-	}
-
-	// Generate a unique shortened key for the original URL
-	shortKey := generateShortKey()
-	saveShortKey(us, shortKey, string(originalURL))
-	result := prepareFullURL(shortKey, ctx)
-
-	ctx.Response().Header().Set("Content-Type", "text/plain; charset=utf-8")
-
-	return ctx.String(http.StatusCreated, result)
-}
-
-func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
-	// десериализуем запрос в структуру модели
-	zap.L().Debug("decoding request")
-	var req models.CreateRequest
-	dec := json.NewDecoder(ctx.Request().Body)
-	if err := dec.Decode(&req); err != nil {
-		zap.L().Debug("cannot decode request JSON body", zap.Error(err))
-		return echo.NewHTTPError(http.StatusInternalServerError, "invalid JSON")
-	}
-
-	// проверяем, что пришёл запрос понятного типа
-	if string(req.URL) == "" {
-		err := "empty url"
-		ctx.Logger().Error(err)
-		zap.L().Debug("unsupported request url", zap.String("url", req.URL))
-		return echo.NewHTTPError(http.StatusBadRequest, err)
-	}
-
-	// Generate a unique shortened key for the original URL
-	shortKey := generateShortKey()
-	saveShortKey(us, shortKey, req.URL)
-
-	// заполняем модель ответа
-	resp := models.CreateResponse{
-		Result: prepareFullURL(shortKey, ctx),
-	}
-
-	return ctx.JSON(http.StatusCreated, resp)
-}
-
-func (us *URLShortener) HandleRedirect(ctx echo.Context) error {
-	shortKey := ctx.Param("id")
-
-	if shortKey == "" {
-		ctx.Logger().Error("empty id")
-		return echo.NewHTTPError(http.StatusBadRequest, "")
-	}
-
-	// Retrieve the original URL from the `urls` map using the shortened key
-	originalURL, found := getOriginalURL(us, shortKey)
-	if !found {
-		err := "URL not found"
-		ctx.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusNotFound, err)
-	}
-
-	return ctx.Redirect(http.StatusTemporaryRedirect, originalURL)
-}
-
-var shortener = &URLShortener{
-	urls: make(map[string]string),
-}
-
 func main() {
 	parseFlags()
 
@@ -188,6 +104,16 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+
+	// urlExample := "postgres://username:password@localhost:5432/database_name"
+	conn, err := pgx.Connect(context.Background(), flagDatabaseDSN)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+	defer conn.Close(context.Background())
+
+	var shortener = newURLShortener(make(map[string]string), conn)
 
 	initMapFromDB(shortener)
 
@@ -243,6 +169,7 @@ func main() {
 	e.GET("/:id", shortener.HandleRedirect)
 	e.POST("/", shortener.HandleShorten)
 	e.POST("/api/shorten", shortener.HandleCreateShorten)
+	e.GET("/ping", shortener.HandlePing)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()

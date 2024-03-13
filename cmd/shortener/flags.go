@@ -17,6 +17,9 @@ var flagLogLevel string
 // неэкспортированная переменная flagFileStoragePath содержит путь до файла хранения
 var flagFileStoragePath string
 
+// неэкспортированная переменная flagDatabaseDSN содержит путь до бд
+var flagDatabaseDSN string
+
 // parseFlags обрабатывает аргументы командной строки
 // и сохраняет их значения в соответствующих переменных
 func parseFlags() {
@@ -33,8 +36,12 @@ func parseFlags() {
 	flag.StringVar(&flagLogLevel, "l", "info", "log level")
 
 	// регистрируем переменную flagFileStoragePath
-	// как аргумент -а со пустым значением по умолчанию
-	flag.StringVar(&flagFileStoragePath, "а", "/tmp/short-url-db.json", "db file path")
+	// как аргумент -f с пустым значением по умолчанию
+	flag.StringVar(&flagFileStoragePath, "f", "/tmp/short-url-db.json", "db file path")
+
+	// регистрируем переменную flagDatabaseDSN
+	// как аргумент -d с пустым значением по умолчанию
+	flag.StringVar(&flagDatabaseDSN, "d", "", "database DSN")
 
 	// парсим переданные серверу аргументы в зарегистрированные переменные
 	flag.Parse()
@@ -67,4 +74,10 @@ func parseFlags() {
 		flagFileStoragePath = envFileStoragePath
 	}
 
+	// для случаев, когда в переменной окружения DATABASE_DSN присутствует непустое значение,
+	// переопределим подключение для бд,
+	// даже если он был передан через аргумент командной строки
+	if envDatabaseDSN, isExist := os.LookupEnv("DATABASE_DSN"); isExist {
+		flagDatabaseDSN = envDatabaseDSN
+	}
 }
