@@ -109,9 +109,9 @@ func main() {
 	conn, err := pgx.Connect(context.Background(), flagDatabaseDSN)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
+	} else {
+		defer conn.Close(context.Background())
 	}
-	defer conn.Close(context.Background())
 
 	var shortener = newURLShortener(make(map[string]string), conn)
 

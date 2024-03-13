@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"reflect"
 )
 
 type IPgxConn interface {
@@ -100,11 +101,14 @@ func (us *URLShortener) HandleRedirect(ctx echo.Context) error {
 }
 
 func (us *URLShortener) HandlePing(ctx echo.Context) error {
+	if reflect.ValueOf(us.conn).IsNil() {
+		ctx.Logger().Error("No connect to db")
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal Server Error")
+	}
 	err := us.conn.Ping(context.Background())
 
 	if err != nil {
-		err := "Lost connect to db"
-		ctx.Logger().Error(err)
+		ctx.Logger().Error("Lost connect to db")
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal Server Error")
 	}
 
