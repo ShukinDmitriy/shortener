@@ -336,6 +336,7 @@ func TestURLShortener_HandlePing(t *testing.T) {
 
 	var shortener = &URLShortener{
 		URLRepository: repository,
+		conn:          mockConn,
 	}
 
 	e := echo.New()
