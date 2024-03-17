@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"github.com/ShukinDmitriy/shortener/internal/logger"
 	internalMiddleware "github.com/ShukinDmitriy/shortener/internal/middleware"
 	"github.com/ShukinDmitriy/shortener/internal/models"
@@ -33,59 +34,11 @@ func generateShortKey() string {
 	return string(shortKey)
 }
 
-func saveShortKey(us *URLShortener, shortKey string, originalURL string) {
-	// Хранение в памяти
-	us.urls[shortKey] = originalURL
-
-	if models.DBProducer == nil {
-		return
-	}
-
-	// Хранение в файле
-	models.DBProducer.WriteEvent(&models.Event{
-		ShortKey:    shortKey,
-		OriginalURL: originalURL,
-	})
-}
-
-func initMapFromDB(us *URLShortener) {
-	var event *models.Event
-	var err error
-
-	if models.DBConsumer == nil {
-		return
-	}
-
-	defer models.DBConsumer.Close()
-
-	for {
-		event, err = models.DBConsumer.ReadEvent()
-
-		if event == nil || err != nil {
-			return
-		}
-
-		// Сохраняем значение в память, т.к. повторно файл не вычитывается
-		us.urls[event.ShortKey] = event.OriginalURL
-	}
-
-}
-
-func getOriginalURL(us *URLShortener, shortKey string) (string, bool) {
-	// Поиск в памяти
-	var originalURL string
-	var found = false
-
-	originalURL, found = us.urls[shortKey]
-
-	return originalURL, found
-}
-
 func prepareFullURL(shortKey string, ctx echo.Context) string {
 	var host string
 
-	if flagBaseAddr != "" {
-		host = flagBaseAddr
+	if environments.FlagBaseAddr != "" {
+		host = environments.FlagBaseAddr
 	} else {
 		host = "http://" + ctx.Request().Host
 	}
@@ -93,29 +46,40 @@ func prepareFullURL(shortKey string, ctx echo.Context) string {
 	return host + "/" + shortKey
 }
 
-func main() {
-	parseFlags()
+func urlRepositoryFactory() (models.URLRepository, error) {
+	repository := &models.MemoryURLRepository{}
 
-	if err := logger.Initialize(flagLogLevel); err != nil {
+	err := repository.Initialize()
+	if err != nil {
+		return nil, err
+	}
+
+	return repository, nil
+}
+
+func main() {
+	environments.ParseFlags()
+
+	if err := logger.Initialize(environments.FlagLogLevel); err != nil {
 		return
 	}
 
-	if err := models.Initialize(flagFileStoragePath); err != nil {
+	repository, err := urlRepositoryFactory()
+
+	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	// urlExample := "postgres://username:password@localhost:5432/database_name"
-	conn, err := pgx.Connect(context.Background(), flagDatabaseDSN)
+	conn, err := pgx.Connect(context.Background(), environments.FlagDatabaseDSN)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 	} else {
 		defer conn.Close(context.Background())
 	}
 
-	var shortener = newURLShortener(make(map[string]string), conn)
-
-	initMapFromDB(shortener)
+	var shortener = newURLShortener(repository, conn)
 
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)
@@ -175,11 +139,11 @@ func main() {
 	defer stop()
 	// Start server
 	go func() {
-		if err := e.Start(flagRunAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := e.Start(environments.FlagRunAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			e.Logger.Fatal("shutting down the server")
 		}
 
-		zap.L().Info("Running server", zap.String("address", flagRunAddr))
+		zap.L().Info("Running server", zap.String("address", environments.FlagRunAddr))
 	}()
 
 	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 10 seconds.

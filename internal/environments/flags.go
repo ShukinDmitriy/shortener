@@ -1,47 +1,47 @@
-package main
+package environments
 
 import (
 	"flag"
 	"os"
 )
 
-// неэкспортированная переменная flagRunAddr содержит адрес и порт для запуска сервера
-var flagRunAddr string
+// неэкспортированная переменная FlagRunAddr содержит адрес и порт для запуска сервера
+var FlagRunAddr string
 
-// неэкспортированная переменная flagBaseAddr содержит базовый адрес результирующего сокращённого URL
-var flagBaseAddr string
+// неэкспортированная переменная FlagBaseAddr содержит базовый адрес результирующего сокращённого URL
+var FlagBaseAddr string
 
-// неэкспортированная переменная flagLogLevel содержит уровень логгирования
-var flagLogLevel string
+// неэкспортированная переменная FlagLogLevel содержит уровень логгирования
+var FlagLogLevel string
 
-// неэкспортированная переменная flagFileStoragePath содержит путь до файла хранения
-var flagFileStoragePath string
+// FlagFileStoragePath содержит путь до файла хранения
+var FlagFileStoragePath string
 
-// неэкспортированная переменная flagDatabaseDSN содержит путь до бд
-var flagDatabaseDSN string
+// неэкспортированная переменная FlagDatabaseDSN содержит путь до бд
+var FlagDatabaseDSN string
 
-// parseFlags обрабатывает аргументы командной строки
+// ParseFlags обрабатывает аргументы командной строки
 // и сохраняет их значения в соответствующих переменных
-func parseFlags() {
-	// регистрируем переменную flagRunAddr
+func ParseFlags() {
+	// регистрируем переменную FlagRunAddr
 	// как аргумент -a со значением :8080 по умолчанию
-	flag.StringVar(&flagRunAddr, "a", "127.0.0.1:8080", "address and port to run server")
+	flag.StringVar(&FlagRunAddr, "a", "127.0.0.1:8080", "address and port to run server")
 
-	// регистрируем переменную flagBaseAddr
+	// регистрируем переменную FlagBaseAddr
 	// как аргумент -b со значением :8000 по умолчанию
-	flag.StringVar(&flagBaseAddr, "b", "http://127.0.0.1:8080", "base server address and port")
+	flag.StringVar(&FlagBaseAddr, "b", "http://127.0.0.1:8080", "base server address and port")
 
-	// регистрируем переменную flagLogLevel
+	// регистрируем переменную FlagLogLevel
 	// как аргумент -l со значением info по умолчанию
-	flag.StringVar(&flagLogLevel, "l", "info", "log level")
+	flag.StringVar(&FlagLogLevel, "l", "info", "log level")
 
-	// регистрируем переменную flagFileStoragePath
+	// регистрируем переменную FlagFileStoragePath
 	// как аргумент -f с пустым значением по умолчанию
-	flag.StringVar(&flagFileStoragePath, "f", "/tmp/short-url-db.json", "db file path")
+	flag.StringVar(&FlagFileStoragePath, "f", "/tmp/short-url-db.json", "db file path")
 
-	// регистрируем переменную flagDatabaseDSN
+	// регистрируем переменную FlagDatabaseDSN
 	// как аргумент -d с пустым значением по умолчанию
-	flag.StringVar(&flagDatabaseDSN, "d", "", "database DSN")
+	flag.StringVar(&FlagDatabaseDSN, "d", "", "database DSN")
 
 	// парсим переданные серверу аргументы в зарегистрированные переменные
 	flag.Parse()
@@ -50,34 +50,34 @@ func parseFlags() {
 	// переопределим адрес запуска сервера,
 	// даже если он был передан через аргумент командной строки
 	if envRunAddr := os.Getenv("SERVER_ADDRESS"); envRunAddr != "" {
-		flagRunAddr = envRunAddr
+		FlagRunAddr = envRunAddr
 	}
 
 	// для случаев, когда в переменной окружения BASE_URL присутствует непустое значение,
 	// переопределим адрес запуска сервера,
 	// даже если он был передан через аргумент командной строки
 	if envBaseAddr := os.Getenv("BASE_URL"); envBaseAddr != "" {
-		flagBaseAddr = envBaseAddr
+		FlagBaseAddr = envBaseAddr
 	}
 
 	// для случаев, когда в переменной окружения LOG_LEVEL присутствует непустое значение,
 	// переопределим уровень логирования,
 	// даже если он был передан через аргумент командной строки
 	if envLogLevel := os.Getenv("LOG_LEVEL"); envLogLevel != "" {
-		flagLogLevel = envLogLevel
+		FlagLogLevel = envLogLevel
 	}
 
 	// для случаев, когда в переменной окружения FILE_STORAGE_PATH присутствует непустое значение,
 	// переопределим уровень логирования,
 	// даже если он был передан через аргумент командной строки
 	if envFileStoragePath, isExist := os.LookupEnv("FILE_STORAGE_PATH"); isExist {
-		flagFileStoragePath = envFileStoragePath
+		FlagFileStoragePath = envFileStoragePath
 	}
 
 	// для случаев, когда в переменной окружения DATABASE_DSN присутствует непустое значение,
 	// переопределим подключение для бд,
 	// даже если он был передан через аргумент командной строки
 	if envDatabaseDSN, isExist := os.LookupEnv("DATABASE_DSN"); isExist {
-		flagDatabaseDSN = envDatabaseDSN
+		FlagDatabaseDSN = envDatabaseDSN
 	}
 }

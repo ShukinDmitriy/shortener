@@ -16,14 +16,17 @@ type IPgxConn interface {
 }
 
 type URLShortener struct {
-	urls map[string]string
-	conn IPgxConn
+	URLRepository models.URLRepository
+	conn          IPgxConn
 }
 
-func newURLShortener(urls map[string]string, conn IPgxConn) *URLShortener {
+func newURLShortener(
+	urlRepository models.URLRepository,
+	conn IPgxConn,
+) *URLShortener {
 	return &URLShortener{
-		urls: urls,
-		conn: conn,
+		URLRepository: urlRepository,
+		conn:          conn,
 	}
 }
 
@@ -43,7 +46,9 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 
 	// Generate a unique shortened key for the original URL
 	shortKey := generateShortKey()
-	saveShortKey(us, shortKey, string(originalURL))
+
+	us.URLRepository.Save(shortKey, string(originalURL))
+
 	result := prepareFullURL(shortKey, ctx)
 
 	ctx.Response().Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -71,7 +76,8 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 
 	// Generate a unique shortened key for the original URL
 	shortKey := generateShortKey()
-	saveShortKey(us, shortKey, req.URL)
+
+	us.URLRepository.Save(shortKey, string(req.URL))
 
 	// заполняем модель ответа
 	resp := models.CreateResponse{
@@ -90,7 +96,7 @@ func (us *URLShortener) HandleRedirect(ctx echo.Context) error {
 	}
 
 	// Retrieve the original URL from the `urls` map using the shortened key
-	originalURL, found := getOriginalURL(us, shortKey)
+	originalURL, found := us.URLRepository.Get(shortKey)
 	if !found {
 		err := "URL not found"
 		ctx.Logger().Error(err)
