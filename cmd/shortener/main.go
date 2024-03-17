@@ -47,7 +47,13 @@ func prepareFullURL(shortKey string, ctx echo.Context) string {
 }
 
 func urlRepositoryFactory() (models.URLRepository, error) {
-	repository := &models.MemoryURLRepository{}
+	var repository models.URLRepository
+
+	if environments.FlagDatabaseDSN != "" {
+		repository = &models.PGURLRepository{}
+	} else {
+		repository = &models.MemoryURLRepository{}
+	}
 
 	err := repository.Initialize()
 	if err != nil {
