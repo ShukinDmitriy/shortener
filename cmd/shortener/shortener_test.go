@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"github.com/ShukinDmitriy/shortener/internal/models"
 	"github.com/labstack/echo/v4"
 	"github.com/pashagolub/pgxmock/v3"
 	"github.com/stretchr/testify/assert"
@@ -45,8 +46,12 @@ func TestURLShortener_HandleShorten(t *testing.T) {
 		},
 	}
 
+	repository := &models.MemoryURLRepository{}
+	err := repository.Initialize()
+	require.NoError(t, err)
+
 	var shortener = &URLShortener{
-		urls: make(map[string]string),
+		URLRepository: repository,
 	}
 
 	e := echo.New()
@@ -133,8 +138,12 @@ func TestURLShortener_HandleCreateShorten(t *testing.T) {
 		},
 	}
 
+	repository := &models.MemoryURLRepository{}
+	err := repository.Initialize()
+	require.NoError(t, err)
+
 	var shortener = &URLShortener{
-		urls: make(map[string]string),
+		URLRepository: repository,
 	}
 
 	e := echo.New()
@@ -218,8 +227,12 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 		},
 	}
 
+	repository := &models.MemoryURLRepository{}
+	err := repository.Initialize()
+	require.NoError(t, err)
+
 	var shortener = &URLShortener{
-		urls: make(map[string]string),
+		URLRepository: repository,
 	}
 
 	e := echo.New()
@@ -317,7 +330,13 @@ func TestURLShortener_HandlePing(t *testing.T) {
 		},
 	}
 
-	var shortener = newURLShortener(make(map[string]string), mockConn)
+	repository := &models.MemoryURLRepository{}
+	err = repository.Initialize()
+	require.NoError(t, err)
+
+	var shortener = &URLShortener{
+		URLRepository: repository,
+	}
 
 	e := echo.New()
 
