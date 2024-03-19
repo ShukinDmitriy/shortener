@@ -1,4 +1,4 @@
-create table if not exists public.url
+create table if not exists application.public.url
 (
     short_key    varchar not null
         constraint url_pk
