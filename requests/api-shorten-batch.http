@@ -1,0 +1,20 @@
+POST http://localhost:8080/api/shorten/batch HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
+Accept: application/json
+Accept-Encoding: deflate, gzip;q=1.0, *;q=0.5
+
+[
+  {
+    "correlation_id": "847b5414-7f41-4363-be2a-e316fbfc2b33",
+    "original_url": "https://practicum.yandex.ru"
+  },
+  {
+    "correlation_id": "022d3f81-2fb5-4fda-bb19-e89bad595b09",
+    "original_url": "https://yandex.ru"
+  },
+  {
+    "correlation_id": "f99352c4-67bc-4000-a89c-e6d0d55956b3",
+    "original_url": "https://music.yandex.ru"
+  }
+]

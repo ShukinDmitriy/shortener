@@ -139,6 +139,7 @@ func main() {
 	e.GET("/:id", shortener.HandleRedirect)
 	e.POST("/", shortener.HandleShorten)
 	e.POST("/api/shorten", shortener.HandleCreateShorten)
+	e.POST("/api/shorten/batch", shortener.HandleCreateShortenBatch)
 	e.GET("/ping", shortener.HandlePing)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)

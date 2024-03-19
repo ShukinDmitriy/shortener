@@ -9,14 +9,24 @@ type CreateRequest struct {
 	URL string `json:"url"`
 }
 
+type CreateRequestBatch struct {
+	CorrelationID string `json:"correlation_id"`
+	OriginalURL   string `json:"original_url"`
+}
+
 type CreateResponse struct {
 	Result string `json:"result"`
+}
+
+type CreateResponseBatch struct {
+	CorrelationID string `json:"correlation_id"`
+	ShortURL      string `json:"short_url"`
 }
 
 type Event struct {
 	ShortKey      string `json:"short_key"`
 	OriginalURL   string `json:"original_url"`
-	CorrelationId string `json:"correlation_id"`
+	CorrelationID string `json:"correlation_id"`
 }
 
 type Consumer struct {

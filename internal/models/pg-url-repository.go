@@ -61,14 +61,32 @@ func (r *PGURLRepository) Get(shortKey string) (string, bool) {
 	return originalURL, err == nil && originalURL != ""
 }
 
-func (r *PGURLRepository) Save(shortKey string, originalURL string) {
-	_, err := r.conn.Exec(
-		context.Background(),
-		`INSERT INTO public.url (short_key, original_url) VALUES ($1, $2)`,
-		shortKey, originalURL,
-	)
-
+func (r *PGURLRepository) Save(events []Event) error {
+	ctx := context.Background()
+	tx, err := r.conn.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		zap.L().Error(err.Error())
+		return err
 	}
+	defer func() {
+		if err != nil {
+			tx.Rollback(ctx)
+		} else {
+			tx.Commit(ctx)
+		}
+	}()
+
+	for _, event := range events {
+		_, err = tx.Exec(
+			ctx,
+			`INSERT INTO public.url (short_key, original_url, correlation_id) VALUES ($1, $2, $3)`,
+			event.ShortKey, event.OriginalURL, event.CorrelationID,
+		)
+
+		if err != nil {
+			zap.L().Error(err.Error())
+			return err
+		}
+	}
+
+	return err
 }

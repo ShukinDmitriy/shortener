@@ -5,11 +5,11 @@ import "github.com/ShukinDmitriy/shortener/internal/environments"
 type MemoryURLRepository struct {
 	DBConsumer *Consumer
 	DBProducer *Producer
-	urls       map[string]string
+	urls       map[string]Event
 }
 
 func (r *MemoryURLRepository) Initialize() error {
-	r.urls = make(map[string]string)
+	r.urls = make(map[string]Event)
 
 	filename := environments.FlagFileStoragePath
 	if filename == "" {
@@ -40,31 +40,32 @@ func (r *MemoryURLRepository) Initialize() error {
 		}
 
 		// Сохраняем значение в память, т.к. повторно файл не вычитывается
-		r.urls[event.ShortKey] = event.OriginalURL
+		r.urls[event.ShortKey] = *event
 	}
 }
 
 func (r *MemoryURLRepository) Get(shortKey string) (string, bool) {
 	// Поиск в памяти
-	var originalURL string
+	var event Event
 	var found = false
 
-	originalURL, found = r.urls[shortKey]
+	event, found = r.urls[shortKey]
 
-	return originalURL, found
+	return event.OriginalURL, found
 }
 
-func (r *MemoryURLRepository) Save(shortKey string, originalURL string) {
-	// Хранение в памяти
-	r.urls[shortKey] = originalURL
+func (r *MemoryURLRepository) Save(events []Event) error {
+	for _, event := range events {
+		// Хранение в памяти
+		r.urls[event.ShortKey] = event
 
-	if r.DBProducer == nil {
-		return
+		if r.DBProducer == nil {
+			continue
+		}
+
+		// Хранение в файле
+		r.DBProducer.WriteEvent(&event)
 	}
 
-	// Хранение в файле
-	r.DBProducer.WriteEvent(&Event{
-		ShortKey:    shortKey,
-		OriginalURL: originalURL,
-	})
+	return nil
 }

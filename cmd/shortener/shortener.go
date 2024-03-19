@@ -47,7 +47,14 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	// Generate a unique shortened key for the original URL
 	shortKey := generateShortKey()
 
-	us.URLRepository.Save(shortKey, string(originalURL))
+	err = us.URLRepository.Save([]models.Event{{
+		ShortKey:    shortKey,
+		OriginalURL: string(originalURL),
+	}})
+	if err != nil {
+		ctx.Logger().Error(err)
+		return echo.NewHTTPError(http.StatusBadRequest, "can't save url. internal error")
+	}
 
 	result := prepareFullURL(shortKey, ctx)
 
@@ -77,12 +84,67 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 	// Generate a unique shortened key for the original URL
 	shortKey := generateShortKey()
 
-	us.URLRepository.Save(shortKey, string(req.URL))
+	err := us.URLRepository.Save([]models.Event{{
+		ShortKey:    shortKey,
+		OriginalURL: req.URL,
+	}})
+	if err != nil {
+		ctx.Logger().Error(err)
+		return echo.NewHTTPError(http.StatusBadRequest, "can't save url. internal error")
+	}
 
 	// заполняем модель ответа
 	resp := models.CreateResponse{
 		Result: prepareFullURL(shortKey, ctx),
 	}
+
+	return ctx.JSON(http.StatusCreated, resp)
+}
+
+func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
+	// десериализуем запрос в структуру модели
+	zap.L().Debug("decoding request")
+	var req []models.CreateRequestBatch
+	dec := json.NewDecoder(ctx.Request().Body)
+	if err := dec.Decode(&req); err != nil {
+		zap.L().Debug("cannot decode request JSON body", zap.Error(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, "invalid JSON")
+	}
+
+	// События для сохранения
+	var events []models.Event
+	// заполняем модель ответа
+	var resp []models.CreateResponseBatch
+
+	for _, cr := range req {
+		// проверяем, что пришёл запрос понятного типа
+		if string(cr.OriginalURL) == "" || string(cr.CorrelationID) == "" {
+			err := "empty original_url or correlation_id"
+			ctx.Logger().Error(err)
+			zap.L().Debug(
+				"unsupported request url",
+				zap.String("original_url", cr.OriginalURL),
+				zap.String("correlation_id", cr.CorrelationID),
+			)
+			return echo.NewHTTPError(http.StatusBadRequest, err)
+		}
+
+		// Generate a unique shortened key for the original URL
+		shortKey := generateShortKey()
+
+		events = append(events, models.Event{
+			ShortKey:      shortKey,
+			OriginalURL:   cr.OriginalURL,
+			CorrelationID: cr.CorrelationID,
+		})
+
+		resp = append(resp, models.CreateResponseBatch{
+			CorrelationID: cr.CorrelationID,
+			ShortURL:      shortKey,
+		})
+	}
+
+	us.URLRepository.Save(events)
 
 	return ctx.JSON(http.StatusCreated, resp)
 }
