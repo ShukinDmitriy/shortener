@@ -2,9 +2,15 @@ package models
 
 import (
 	"context"
+	"database/sql"
 	"github.com/ShukinDmitriy/shortener/internal/environments"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
+	"os"
+	"path"
 )
 
 type PGURLRepository struct {
@@ -12,7 +18,6 @@ type PGURLRepository struct {
 }
 
 func (r *PGURLRepository) Initialize() error {
-	// urlExample := "postgres://username:password@localhost:5432/database_name"
 	cont := context.Background()
 	var conn *pgx.Conn
 	var err error
@@ -21,22 +26,22 @@ func (r *PGURLRepository) Initialize() error {
 	if err != nil {
 		return err
 	}
-
 	r.conn = conn
 
-	// Создаем БД и таблицу если их нет (TODO: по идее это делается в миграциях, но таковы требования)
-	_, err = r.conn.Exec(
-		cont,
-		`create table if not exists public.url
-(
-    short_key    varchar not null
-        constraint url_pk
-            primary key
-        constraint url_pk_2
-            unique,
-    original_url varchar
-);`,
-	)
+	// Миграции TODO вынести в отдельный файл
+	currentDir, err := os.Getwd()
+	db, err := sql.Open("postgres", environments.FlagDatabaseDSN)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		db.Close()
+	}()
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	m, err := migrate.NewWithDatabaseInstance(
+		"file:///"+path.Join(currentDir, "db", "migrations"),
+		"postgres", driver)
+	err = m.Up()
 	if err != nil {
 		return err
 	}
