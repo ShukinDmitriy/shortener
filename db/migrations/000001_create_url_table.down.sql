@@ -1,1 +1,1 @@
-drop table if exists application.public.url;
+drop table if exists public.url;

@@ -1,3 +1,2 @@
-alter table application.public.url
+alter table public.url
     drop column if exists correlation_id;
-

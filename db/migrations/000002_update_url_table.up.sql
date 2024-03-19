@@ -1,3 +1,2 @@
-
-alter table application.public.url
+alter table public.url
     add if not exists correlation_id varchar;
