@@ -29,7 +29,7 @@ func (r *PGURLRepository) Initialize() error {
 	r.conn = conn
 
 	// Миграции TODO вынести в отдельный файл
-	currentDir, err := os.Getwd()
+	currentDir, _ := os.Getwd()
 	db, err := sql.Open("postgres", environments.FlagDatabaseDSN)
 	if err != nil {
 		return err
@@ -37,8 +37,8 @@ func (r *PGURLRepository) Initialize() error {
 	defer func() {
 		db.Close()
 	}()
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
-	m, err := migrate.NewWithDatabaseInstance(
+	driver, _ := postgres.WithInstance(db, &postgres.Config{})
+	m, _ := migrate.NewWithDatabaseInstance(
 		"file:///"+path.Join(currentDir, "db", "migrations"),
 		"postgres", driver)
 	err = m.Up()
