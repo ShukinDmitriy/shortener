@@ -14,8 +14,9 @@ type CreateResponse struct {
 }
 
 type Event struct {
-	ShortKey    string `json:"shortKey"`
-	OriginalURL string `json:"originalURL"`
+	ShortKey      string `json:"short_key"`
+	OriginalURL   string `json:"original_url"`
+	CorrelationId string `json:"correlation_id"`
 }
 
 type Consumer struct {
