@@ -1,3 +1,4 @@
+begin;
 create table if not exists public.url
 (
     short_key    varchar not null
@@ -7,3 +8,4 @@ create table if not exists public.url
             unique,
     original_url varchar
 );
+commit;
