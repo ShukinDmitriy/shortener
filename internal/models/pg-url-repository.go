@@ -81,39 +81,7 @@ func (r *PGURLRepository) Get(shortKey string) (string, bool) {
 	return originalURL, err == nil && originalURL != ""
 }
 
-// Из-за того что тесты на 11 итерацию не проходят с новым полем
-// correlation_id этот костыль с 2 одинаковыми методами
 func (r *PGURLRepository) Save(events []Event) error {
-	ctx := context.Background()
-	tx, err := r.conn.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			tx.Rollback(ctx)
-		} else {
-			tx.Commit(ctx)
-		}
-	}()
-
-	for _, event := range events {
-		_, err = tx.Exec(
-			ctx,
-			`INSERT INTO public.url (short_key, original_url) VALUES ($1, $2)`,
-			event.ShortKey, event.OriginalURL,
-		)
-
-		if err != nil {
-			zap.L().Error(err.Error())
-			return err
-		}
-	}
-
-	return err
-}
-
-func (r *PGURLRepository) SaveBatch(events []Event) error {
 	ctx := context.Background()
 	tx, err := r.conn.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {

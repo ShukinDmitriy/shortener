@@ -144,7 +144,7 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 		})
 	}
 
-	us.URLRepository.SaveBatch(events)
+	us.URLRepository.Save(events)
 
 	return ctx.JSON(http.StatusCreated, resp)
 }

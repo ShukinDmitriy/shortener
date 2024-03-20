@@ -69,7 +69,3 @@ func (r *MemoryURLRepository) Save(events []Event) error {
 
 	return nil
 }
-
-func (r *MemoryURLRepository) SaveBatch(events []Event) error {
-	return r.Save(events)
-}
