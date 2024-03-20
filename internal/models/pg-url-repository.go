@@ -56,8 +56,7 @@ func (r *PGURLRepository) Initialize() error {
 
 	err = m.Up()
 	if err != nil {
-		zap.L().Error("can't migrate up", zap.String("err", err.Error()))
-		return err
+		zap.L().Info("can't migrate up", zap.String("err", err.Error()))
 	}
 
 	zap.L().Info("migrate runned")
