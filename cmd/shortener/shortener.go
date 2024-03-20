@@ -140,7 +140,7 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 
 		resp = append(resp, models.CreateResponseBatch{
 			CorrelationID: cr.CorrelationID,
-			ShortURL:      shortKey,
+			ShortURL:      prepareFullURL(shortKey, ctx),
 		})
 	}
 
