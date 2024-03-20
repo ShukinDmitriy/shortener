@@ -30,21 +30,37 @@ func (r *PGURLRepository) Initialize() error {
 
 	// Миграции TODO вынести в отдельный файл
 	currentDir, _ := os.Getwd()
+	zap.L().Info("current dir", zap.String("currentDir", currentDir))
 	db, err := sql.Open("postgres", environments.FlagDatabaseDSN)
 	if err != nil {
+		zap.L().Error("can't connect to db", zap.String("err", err.Error()))
 		return err
 	}
 	defer func() {
 		db.Close()
 	}()
-	driver, _ := postgres.WithInstance(db, &postgres.Config{})
+
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		zap.L().Error("can't create driver", zap.String("err", err.Error()))
+		return err
+	}
+
 	m, _ := migrate.NewWithDatabaseInstance(
 		"file:///"+path.Join(currentDir, "db", "migrations"),
 		"postgres", driver)
-	err = m.Up()
 	if err != nil {
+		zap.L().Error("can't create new migrate", zap.String("err", err.Error()))
 		return err
 	}
+
+	err = m.Up()
+	if err != nil {
+		zap.L().Error("can't migrate up", zap.String("err", err.Error()))
+		return err
+	}
+
+	zap.L().Info("migrate runned")
 
 	return nil
 }
