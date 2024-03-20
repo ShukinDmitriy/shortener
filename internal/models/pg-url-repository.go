@@ -46,7 +46,7 @@ func (r *PGURLRepository) Initialize() error {
 		return err
 	}
 
-	m, _ := migrate.NewWithDatabaseInstance(
+	m, err := migrate.NewWithDatabaseInstance(
 		"file:///"+path.Join(currentDir, "db", "migrations"),
 		"postgres", driver)
 	if err != nil {
