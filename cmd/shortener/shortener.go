@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/ShukinDmitriy/shortener/internal/models"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
@@ -47,20 +48,28 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	// Generate a unique shortened key for the original URL
 	shortKey := generateShortKey()
 
-	err = us.URLRepository.Save([]models.Event{{
+	status := http.StatusCreated
+	events := []*models.Event{{
 		ShortKey:    shortKey,
 		OriginalURL: string(originalURL),
-	}})
+	}}
+	err = us.URLRepository.Save(events)
 	if err != nil {
 		ctx.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusBadRequest, "can't save url. internal error")
+
+		if errors.Is(err, models.ErrURLExist) {
+			status = http.StatusConflict
+			shortKey = events[0].ShortKey
+		} else {
+			return echo.NewHTTPError(http.StatusBadRequest, "can't save url. internal error")
+		}
 	}
 
 	result := prepareFullURL(shortKey, ctx)
 
 	ctx.Response().Header().Set("Content-Type", "text/plain; charset=utf-8")
 
-	return ctx.String(http.StatusCreated, result)
+	return ctx.String(status, result)
 }
 
 func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
@@ -84,13 +93,22 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 	// Generate a unique shortened key for the original URL
 	shortKey := generateShortKey()
 
-	err := us.URLRepository.Save([]models.Event{{
+	status := http.StatusCreated
+	events := []*models.Event{{
 		ShortKey:    shortKey,
 		OriginalURL: req.URL,
-	}})
+	}}
+
+	err := us.URLRepository.Save(events)
 	if err != nil {
 		ctx.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusBadRequest, "can't save url. internal error")
+
+		if errors.Is(err, models.ErrURLExist) {
+			status = http.StatusConflict
+			shortKey = events[0].ShortKey
+		} else {
+			return echo.NewHTTPError(http.StatusBadRequest, "can't save url. internal error")
+		}
 	}
 
 	// заполняем модель ответа
@@ -98,7 +116,7 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 		Result: prepareFullURL(shortKey, ctx),
 	}
 
-	return ctx.JSON(http.StatusCreated, resp)
+	return ctx.JSON(status, resp)
 }
 
 func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
@@ -112,7 +130,7 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 	}
 
 	// События для сохранения
-	var events []models.Event
+	var events []*models.Event
 	// заполняем модель ответа
 	var resp []models.CreateResponseBatch
 
@@ -132,21 +150,33 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 		// Generate a unique shortened key for the original URL
 		shortKey := generateShortKey()
 
-		events = append(events, models.Event{
+		events = append(events, &models.Event{
 			ShortKey:      shortKey,
 			OriginalURL:   cr.OriginalURL,
 			CorrelationID: cr.CorrelationID,
 		})
+	}
 
+	status := http.StatusCreated
+	err := us.URLRepository.Save(events)
+	if err != nil {
+		ctx.Logger().Error(err)
+
+		if errors.Is(err, models.ErrURLExist) {
+			status = http.StatusConflict
+		} else {
+			return echo.NewHTTPError(http.StatusBadRequest, "can't save url. internal error")
+		}
+	}
+
+	for _, event := range events {
 		resp = append(resp, models.CreateResponseBatch{
-			CorrelationID: cr.CorrelationID,
-			ShortURL:      prepareFullURL(shortKey, ctx),
+			CorrelationID: event.CorrelationID,
+			ShortURL:      prepareFullURL(event.ShortKey, ctx),
 		})
 	}
 
-	us.URLRepository.Save(events)
-
-	return ctx.JSON(http.StatusCreated, resp)
+	return ctx.JSON(status, resp)
 }
 
 func (us *URLShortener) HandleRedirect(ctx echo.Context) error {

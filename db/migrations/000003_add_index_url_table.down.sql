@@ -1,0 +1,1 @@
+drop index if exists url_original_url_uindex;

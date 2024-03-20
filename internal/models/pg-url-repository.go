@@ -3,15 +3,20 @@ package models
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
 	"os"
 	"path"
 )
+
+var ErrURLExist = errors.New("URL exist")
 
 type PGURLRepository struct {
 	conn *pgx.Conn
@@ -81,32 +86,50 @@ func (r *PGURLRepository) Get(shortKey string) (string, bool) {
 	return originalURL, err == nil && originalURL != ""
 }
 
-func (r *PGURLRepository) Save(events []Event) error {
+func (r *PGURLRepository) Save(events []*Event) error {
 	ctx := context.Background()
-	tx, err := r.conn.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			tx.Rollback(ctx)
-		} else {
-			tx.Commit(ctx)
-		}
-	}()
+
+	errs := []error{}
 
 	for _, event := range events {
-		_, err = tx.Exec(
+		_, err := r.conn.Exec(
 			ctx,
-			`INSERT INTO public.url (short_key, original_url, correlation_id) VALUES ($1, $2, $3)`,
+			`INSERT INTO public.url (short_key, original_url, correlation_id)
+VALUES ($1, $2, $3);`,
 			event.ShortKey, event.OriginalURL, event.CorrelationID,
 		)
 
 		if err != nil {
 			zap.L().Error(err.Error())
-			return err
+
+			// проверяем, что ошибка сигнализирует о наличие данных в БД
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
+				errs = append(errs, ErrURLExist)
+				shortKey, _ := r.GetShortKeyByOriginalURL(event.OriginalURL)
+				event.ShortKey = shortKey
+			} else {
+				return err
+			}
 		}
 	}
 
-	return err
+	return errors.Join(errs...)
+}
+
+func (r *PGURLRepository) GetShortKeyByOriginalURL(originalURL string) (string, bool) {
+	var shortKey string
+
+	row := r.conn.QueryRow(
+		context.Background(),
+		`SELECT short_key from public.url WHERE original_url = $1;`,
+		originalURL,
+	)
+
+	err := row.Scan(&shortKey)
+	if err != nil {
+		zap.L().Error(err.Error())
+	}
+
+	return shortKey, err == nil && shortKey != ""
 }

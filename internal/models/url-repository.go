@@ -5,5 +5,7 @@ type URLRepository interface {
 
 	Get(shortKey string) (string, bool)
 
-	Save(events []Event) error
+	Save(events []*Event) error
+
+	GetShortKeyByOriginalURL(originalURL string) (string, bool)
 }

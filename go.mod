@@ -4,6 +4,7 @@ go 1.21.6
 
 require (
 	github.com/golang-migrate/migrate/v4 v4.17.0
+	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/labstack/echo/v4 v4.11.4
 	github.com/labstack/gommon v0.4.2

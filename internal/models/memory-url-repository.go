@@ -54,18 +54,34 @@ func (r *MemoryURLRepository) Get(shortKey string) (string, bool) {
 	return event.OriginalURL, found
 }
 
-func (r *MemoryURLRepository) Save(events []Event) error {
+func (r *MemoryURLRepository) Save(events []*Event) error {
 	for _, event := range events {
+		shortKey, found := r.GetShortKeyByOriginalURL(event.OriginalURL)
+		if found {
+			event.ShortKey = shortKey
+			continue
+		}
+
 		// Хранение в памяти
-		r.urls[event.ShortKey] = event
+		r.urls[event.ShortKey] = *event
 
 		if r.DBProducer == nil {
 			continue
 		}
 
 		// Хранение в файле
-		r.DBProducer.WriteEvent(&event)
+		r.DBProducer.WriteEvent(event)
 	}
 
 	return nil
+}
+
+func (r *MemoryURLRepository) GetShortKeyByOriginalURL(originalURL string) (string, bool) {
+	for _, event := range r.urls {
+		if event.OriginalURL == originalURL {
+			return event.ShortKey, true
+		}
+	}
+
+	return "", false
 }
