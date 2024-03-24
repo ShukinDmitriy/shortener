@@ -37,7 +37,7 @@ func generateShortKey() string {
 	return string(shortKey)
 }
 
-func prepareFullURL(shortKey string, ctx echo.Context) string {
+func prepareFullURL(ctx echo.Context, shortKey string) string {
 	var host string
 
 	if environments.FlagBaseAddr != "" {

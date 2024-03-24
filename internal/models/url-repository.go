@@ -1,11 +1,15 @@
 package models
 
+import (
+	"context"
+)
+
 type URLRepository interface {
 	Initialize() error
 
 	Get(shortKey string) (string, bool)
 
-	Save(events []*Event) error
+	Save(ctx context.Context, events []*Event) error
 
 	GetShortKeyByOriginalURL(originalURL string) (string, bool)
 }
