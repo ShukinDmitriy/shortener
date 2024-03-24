@@ -16,38 +16,12 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 	"go.uber.org/zap"
-	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"time"
 )
-
-func generateShortKey() string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	const keyLength = 6
-
-	source := rand.NewSource(time.Now().UnixNano())
-	rng := rand.New(source)
-	shortKey := make([]byte, keyLength)
-	for i := range shortKey {
-		shortKey[i] = charset[rng.Intn(len(charset))]
-	}
-	return string(shortKey)
-}
-
-func prepareFullURL(ctx echo.Context, shortKey string) string {
-	var host string
-
-	if environments.FlagBaseAddr != "" {
-		host = environments.FlagBaseAddr
-	} else {
-		host = "http://" + ctx.Request().Host
-	}
-
-	return host + "/" + shortKey
-}
 
 func urlRepositoryFactory() (models.URLRepository, error) {
 	var repository models.URLRepository
@@ -148,13 +122,6 @@ func main() {
 	e.Use(middleware.DecompressWithConfig(middleware.DecompressConfig{}))
 
 	// auth
-	e.Use(auth.CreateTokenWithConfig(auth.CreateTokenConfig{
-		Skipper: func(c echo.Context) bool {
-			return strings.Contains(c.Path(), "/api/user/")
-		},
-	}))
-	e.Use(auth.TokenRefresherMiddleware)
-
 	e.Use(echojwt.WithConfig(echojwt.Config{
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return &auth.Claims{}
@@ -167,6 +134,13 @@ func main() {
 		TokenLookup:   "cookie:access-token", // "<source>:<name>"
 		ErrorHandler:  auth.JWTErrorChecker,
 	}))
+
+	e.Use(auth.CreateTokenWithConfig(auth.CreateTokenConfig{
+		Skipper: func(c echo.Context) bool {
+			return strings.Contains(c.Path(), "/api/user/")
+		},
+	}))
+	e.Use(auth.TokenRefresherMiddleware)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()

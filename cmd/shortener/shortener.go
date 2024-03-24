@@ -48,7 +48,7 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	}
 
 	// Generate a unique shortened key for the original URL
-	shortKey := generateShortKey()
+	shortKey := models.GenerateShortKey()
 
 	status := http.StatusCreated
 	events := []*models.Event{{
@@ -61,7 +61,7 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	if errors.Is(err, models.ErrURLExist) {
 		ctx.Logger().Error(err)
 		shortKey = events[0].ShortKey
-		return ctx.String(http.StatusConflict, prepareFullURL(ctx, shortKey))
+		return ctx.String(http.StatusConflict, models.PrepareFullURL(ctx, shortKey))
 	}
 
 	if err != nil {
@@ -69,7 +69,7 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "can't save url. internal error")
 	}
 
-	result := prepareFullURL(ctx, shortKey)
+	result := models.PrepareFullURL(ctx, shortKey)
 
 	ctx.Response().Header().Set("Content-Type", "text/plain; charset=utf-8")
 
@@ -95,7 +95,7 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 	}
 
 	// Generate a unique shortened key for the original URL
-	shortKey := generateShortKey()
+	shortKey := models.GenerateShortKey()
 
 	status := http.StatusCreated
 	events := []*models.Event{{
@@ -118,7 +118,7 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 
 	// заполняем модель ответа
 	resp := models.CreateResponse{
-		Result: prepareFullURL(ctx, shortKey),
+		Result: models.PrepareFullURL(ctx, shortKey),
 	}
 
 	return ctx.JSON(status, resp)
@@ -155,7 +155,7 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 		}
 
 		// Generate a unique shortened key for the original URL
-		shortKey := generateShortKey()
+		shortKey := models.GenerateShortKey()
 
 		events = append(events, &models.Event{
 			ShortKey:      shortKey,
@@ -180,7 +180,7 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 	for _, event := range events {
 		resp = append(resp, models.CreateResponseBatch{
 			CorrelationID: event.CorrelationID,
-			ShortURL:      prepareFullURL(ctx, event.ShortKey),
+			ShortURL:      models.PrepareFullURL(ctx, event.ShortKey),
 		})
 	}
 
@@ -222,61 +222,23 @@ func (us *URLShortener) HandlePing(ctx echo.Context) error {
 }
 
 func (us *URLShortener) HandleUserUrlGet(ctx echo.Context) error {
-	//// десериализуем запрос в структуру модели
-	//zap.L().Debug("decoding request")
-	//var req []models.CreateRequestBatch
-	//dec := json.NewDecoder(ctx.Request().Body)
-	//if err := dec.Decode(&req); err != nil {
-	//	zap.L().Debug("cannot decode request JSON body", zap.Error(err))
-	//	return echo.NewHTTPError(http.StatusInternalServerError, "invalid JSON")
-	//}
-	//
-	//// События для сохранения
-	//var events []*models.Event
-	//// заполняем модель ответа
-	var resp []models.CreateResponseBatch
-	//
-	//for _, cr := range req {
-	//	// проверяем, что пришёл запрос понятного типа
-	//	if string(cr.OriginalURL) == "" || string(cr.CorrelationID) == "" {
-	//		err := "empty original_url or correlation_id"
-	//		ctx.Logger().Error(err)
-	//		zap.L().Debug(
-	//			"unsupported request url",
-	//			zap.String("original_url", cr.OriginalURL),
-	//			zap.String("correlation_id", cr.CorrelationID),
-	//		)
-	//		return echo.NewHTTPError(http.StatusBadRequest, err)
-	//	}
-	//
-	//	// Generate a unique shortened key for the original URL
-	//	shortKey := generateShortKey()
-	//
-	//	events = append(events, &models.Event{
-	//		ShortKey:      shortKey,
-	//		OriginalURL:   cr.OriginalURL,
-	//		CorrelationID: cr.CorrelationID,
-	//	})
-	//}
-	//
-	//status := http.StatusCreated
-	//err := us.URLRepository.Save(events)
-	//if err != nil {
-	//	ctx.Logger().Error(err)
-	//
-	//	if errors.Is(err, models.ErrURLExist) {
-	//		status = http.StatusConflict
-	//	} else {
-	//		return echo.NewHTTPError(http.StatusBadRequest, "can't save url. internal error")
-	//	}
-	//}
-	//
-	//for _, event := range events {
-	//	resp = append(resp, models.CreateResponseBatch{
-	//		CorrelationID: event.CorrelationID,
-	//		ShortURL:      prepareFullURL(event.ShortKey, ctx),
-	//	})
-	//}
+	userID := auth.GetUserId()
 
-	return ctx.JSON(http.StatusNoContent, resp)
+	if userID == "" {
+		return ctx.JSON(http.StatusNoContent, nil)
+	}
+
+	events := us.URLRepository.GetEventsByUserID(ctx.Request().Context(), userID)
+
+	// заполняем модель ответа
+	var resp []models.GetUserURLsResponse
+
+	for _, event := range events {
+		resp = append(resp, models.GetUserURLsResponse{
+			ShortURL:    models.PrepareFullURL(ctx, event.ShortKey),
+			OriginalURL: event.OriginalURL,
+		})
+	}
+
+	return ctx.JSON(http.StatusOK, resp)
 }

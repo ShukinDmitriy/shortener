@@ -15,6 +15,10 @@ func TokenRefresherMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		u := c.Get("user").(*jwt.Token)
 
 		claims := u.Claims.(*Claims)
+		user := &User{
+			ID: claims.ID,
+		}
+		SetUser(user)
 
 		if time.Unix(claims.ExpiresAt.Unix(), 0).Sub(time.Now()) < 15*time.Minute {
 			rc, err := c.Cookie(refreshTokenCookieName)
@@ -29,9 +33,7 @@ func TokenRefresherMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 				}
 
 				if tkn != nil && tkn.Valid {
-					_ = GenerateTokensAndSetCookies(&User{
-						ID: claims.ID,
-					}, c)
+					_ = GenerateTokensAndSetCookies(user, c)
 				}
 			}
 		}

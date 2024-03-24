@@ -32,8 +32,6 @@ func CreateTokenWithConfig(config CreateTokenConfig) echo.MiddlewareFunc {
 				return echo.NewHTTPError(http.StatusUnauthorized, "Token is incorrect")
 			}
 
-			SetUser(storedUser)
-
 			return next(c)
 		}
 	}

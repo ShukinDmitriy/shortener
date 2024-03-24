@@ -12,4 +12,6 @@ type URLRepository interface {
 	Save(ctx context.Context, events []*Event) error
 
 	GetShortKeyByOriginalURL(originalURL string) (string, bool)
+
+	GetEventsByUserID(ctx context.Context, userID string) []*Event
 }
