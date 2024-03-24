@@ -27,6 +27,7 @@ type Event struct {
 	ShortKey      string `json:"short_key"`
 	OriginalURL   string `json:"original_url"`
 	CorrelationID string `json:"correlation_id"`
+	UserID        string `json:"user_id"`
 }
 
 type Consumer struct {

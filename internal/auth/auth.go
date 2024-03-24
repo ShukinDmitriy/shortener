@@ -14,6 +14,8 @@ const (
 	jwtRefreshSecretKey    = "some-refresh-secret-key"
 )
 
+var user *User
+
 func GetJWTSecret() string {
 	return jwtSecretKey
 }
@@ -42,6 +44,21 @@ func GenerateTokensAndSetCookies(user *User, c echo.Context) error {
 	setTokenCookie(refreshTokenCookieName, refreshToken, exp, c)
 
 	return nil
+}
+
+func SetUser(newUser *User) {
+	user = newUser
+}
+
+func GetUserId() string {
+	if user != nil {
+		return user.ID
+	}
+
+	return ""
+}
+func JWTErrorChecker(c echo.Context, err error) error {
+	return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
 }
 
 func generateRefreshToken(user *User) (string, time.Time, error) {
@@ -92,8 +109,4 @@ func setUserCookie(user *User, expiration time.Time, c echo.Context) {
 	cookie.Expires = expiration
 	cookie.Path = "/"
 	c.SetCookie(cookie)
-}
-
-func JWTErrorChecker(c echo.Context, err error) error {
-	return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
 }

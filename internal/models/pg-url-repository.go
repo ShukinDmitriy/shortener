@@ -92,9 +92,9 @@ func (r *PGURLRepository) Save(ctx context.Context, events []*Event) error {
 	for _, event := range events {
 		_, err := r.conn.Exec(
 			ctx,
-			`INSERT INTO public.url (short_key, original_url, correlation_id)
-VALUES ($1, $2, $3);`,
-			event.ShortKey, event.OriginalURL, event.CorrelationID,
+			`INSERT INTO public.url (short_key, original_url, correlation_id, user_id)
+VALUES ($1, $2, $3, $4);`,
+			event.ShortKey, event.OriginalURL, event.CorrelationID, event.UserID,
 		)
 
 		if err != nil {
