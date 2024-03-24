@@ -50,9 +50,7 @@ func TestURLShortener_HandleShorten(t *testing.T) {
 	err := repository.Initialize()
 	require.NoError(t, err)
 
-	var shortener = &URLShortener{
-		URLRepository: repository,
-	}
+	var shortener = newURLShortener(repository, nil)
 
 	e := echo.New()
 
@@ -142,9 +140,7 @@ func TestURLShortener_HandleCreateShorten(t *testing.T) {
 	err := repository.Initialize()
 	require.NoError(t, err)
 
-	var shortener = &URLShortener{
-		URLRepository: repository,
-	}
+	var shortener = newURLShortener(repository, nil)
 
 	e := echo.New()
 
@@ -231,9 +227,7 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 	err := repository.Initialize()
 	require.NoError(t, err)
 
-	var shortener = &URLShortener{
-		URLRepository: repository,
-	}
+	var shortener = newURLShortener(repository, nil)
 
 	e := echo.New()
 
@@ -334,10 +328,7 @@ func TestURLShortener_HandlePing(t *testing.T) {
 	err = repository.Initialize()
 	require.NoError(t, err)
 
-	var shortener = &URLShortener{
-		URLRepository: repository,
-		conn:          mockConn,
-	}
+	var shortener = newURLShortener(repository, mockConn)
 
 	e := echo.New()
 

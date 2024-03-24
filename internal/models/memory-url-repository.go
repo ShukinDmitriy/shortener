@@ -1,6 +1,9 @@
 package models
 
-import "github.com/ShukinDmitriy/shortener/internal/environments"
+import (
+	"context"
+	"github.com/ShukinDmitriy/shortener/internal/environments"
+)
 
 type MemoryURLRepository struct {
 	DBConsumer *Consumer
@@ -54,7 +57,7 @@ func (r *MemoryURLRepository) Get(shortKey string) (string, bool) {
 	return event.OriginalURL, found
 }
 
-func (r *MemoryURLRepository) Save(events []*Event) error {
+func (r *MemoryURLRepository) Save(ctx context.Context, events []*Event) error {
 	for _, event := range events {
 		shortKey, found := r.GetShortKeyByOriginalURL(event.OriginalURL)
 		if found {

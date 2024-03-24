@@ -12,18 +12,18 @@ import (
 	"reflect"
 )
 
-type IPgxConn interface {
+type PgxConnPinger interface {
 	Ping(context.Context) error
 }
 
 type URLShortener struct {
 	URLRepository models.URLRepository
-	conn          IPgxConn
+	conn          PgxConnPinger
 }
 
 func newURLShortener(
 	urlRepository models.URLRepository,
-	conn IPgxConn,
+	conn PgxConnPinger,
 ) *URLShortener {
 	return &URLShortener{
 		URLRepository: urlRepository,
@@ -33,6 +33,7 @@ func newURLShortener(
 
 func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	originalURL, err := io.ReadAll(ctx.Request().Body)
+	defer ctx.Request().Body.Close()
 
 	if err != nil {
 		ctx.Logger().Error(err)
@@ -53,19 +54,20 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 		ShortKey:    shortKey,
 		OriginalURL: string(originalURL),
 	}}
-	err = us.URLRepository.Save(events)
-	if err != nil {
-		ctx.Logger().Error(err)
+	err = us.URLRepository.Save(ctx.Request().Context(), events)
 
-		if errors.Is(err, models.ErrURLExist) {
-			status = http.StatusConflict
-			shortKey = events[0].ShortKey
-		} else {
-			return echo.NewHTTPError(http.StatusBadRequest, "can't save url. internal error")
-		}
+	if errors.Is(err, models.ErrURLExist) {
+		ctx.Logger().Error(err)
+		shortKey = events[0].ShortKey
+		return ctx.String(http.StatusConflict, prepareFullURL(ctx, shortKey))
 	}
 
-	result := prepareFullURL(shortKey, ctx)
+	if err != nil {
+		ctx.Logger().Error(err)
+		return echo.NewHTTPError(http.StatusBadRequest, "can't save url. internal error")
+	}
+
+	result := prepareFullURL(ctx, shortKey)
 
 	ctx.Response().Header().Set("Content-Type", "text/plain; charset=utf-8")
 
@@ -99,7 +101,7 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 		OriginalURL: req.URL,
 	}}
 
-	err := us.URLRepository.Save(events)
+	err := us.URLRepository.Save(ctx.Request().Context(), events)
 	if err != nil {
 		ctx.Logger().Error(err)
 
@@ -113,7 +115,7 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 
 	// заполняем модель ответа
 	resp := models.CreateResponse{
-		Result: prepareFullURL(shortKey, ctx),
+		Result: prepareFullURL(ctx, shortKey),
 	}
 
 	return ctx.JSON(status, resp)
@@ -158,7 +160,7 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 	}
 
 	status := http.StatusCreated
-	err := us.URLRepository.Save(events)
+	err := us.URLRepository.Save(ctx.Request().Context(), events)
 	if err != nil {
 		ctx.Logger().Error(err)
 
@@ -172,7 +174,7 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 	for _, event := range events {
 		resp = append(resp, models.CreateResponseBatch{
 			CorrelationID: event.CorrelationID,
-			ShortURL:      prepareFullURL(event.ShortKey, ctx),
+			ShortURL:      prepareFullURL(ctx, event.ShortKey),
 		})
 	}
 
@@ -203,7 +205,7 @@ func (us *URLShortener) HandlePing(ctx echo.Context) error {
 		ctx.Logger().Error("No connect to db")
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal Server Error")
 	}
-	err := us.conn.Ping(context.Background())
+	err := us.conn.Ping(ctx.Request().Context())
 
 	if err != nil {
 		ctx.Logger().Error("Lost connect to db")

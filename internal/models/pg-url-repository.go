@@ -86,9 +86,7 @@ func (r *PGURLRepository) Get(shortKey string) (string, bool) {
 	return originalURL, err == nil && originalURL != ""
 }
 
-func (r *PGURLRepository) Save(events []*Event) error {
-	ctx := context.Background()
-
+func (r *PGURLRepository) Save(ctx context.Context, events []*Event) error {
 	errs := []error{}
 
 	for _, event := range events {
