@@ -73,7 +73,7 @@ func main() {
 	e.POST("/api/shorten", shortener.HandleCreateShorten)
 	e.POST("/api/shorten/batch", shortener.HandleCreateShortenBatch)
 	e.GET("/ping", shortener.HandlePing)
-	e.GET("/api/user/urls", shortener.HandleUserUrlGet)
+	e.GET("/api/user/urls", shortener.HandleUserURLGet)
 
 	//-------------------
 	// middleware

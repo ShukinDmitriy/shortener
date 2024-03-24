@@ -50,7 +50,7 @@ func SetUser(newUser *User) {
 	user = newUser
 }
 
-func GetUserId() string {
+func GetUserID() string {
 	if user != nil {
 		return user.ID
 	}

@@ -20,7 +20,7 @@ func TokenRefresherMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 		SetUser(user)
 
-		if time.Unix(claims.ExpiresAt.Unix(), 0).Sub(time.Now()) < 15*time.Minute {
+		if time.Until(time.Unix(claims.ExpiresAt.Unix(), 0)) < 15*time.Minute {
 			rc, err := c.Cookie(refreshTokenCookieName)
 			if err == nil && rc != nil {
 				tkn, err := jwt.ParseWithClaims(rc.Value, claims, func(token *jwt.Token) (interface{}, error) {
