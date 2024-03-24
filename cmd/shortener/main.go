@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ShukinDmitriy/shortener/internal/auth"
 	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"github.com/ShukinDmitriy/shortener/internal/logger"
 	internalMiddleware "github.com/ShukinDmitriy/shortener/internal/middleware"
 	"github.com/ShukinDmitriy/shortener/internal/models"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5"
+	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
@@ -90,8 +93,16 @@ func main() {
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)
 
+	// Routing
+	e.GET("/:id", shortener.HandleRedirect)
+	e.POST("/", shortener.HandleShorten)
+	e.POST("/api/shorten", shortener.HandleCreateShorten)
+	e.POST("/api/shorten/batch", shortener.HandleCreateShortenBatch)
+	e.GET("/ping", shortener.HandlePing)
+	e.GET("/api/user/urls", shortener.HandleUserUrlGet)
+
 	//-------------------
-	// Custom middleware
+	// middleware
 	//-------------------
 	// ResponseInfo
 	e.Use(internalMiddleware.ResponseInfo(zap.L()))
@@ -136,11 +147,26 @@ func main() {
 	// decompress
 	e.Use(middleware.DecompressWithConfig(middleware.DecompressConfig{}))
 
-	e.GET("/:id", shortener.HandleRedirect)
-	e.POST("/", shortener.HandleShorten)
-	e.POST("/api/shorten", shortener.HandleCreateShorten)
-	e.POST("/api/shorten/batch", shortener.HandleCreateShortenBatch)
-	e.GET("/ping", shortener.HandlePing)
+	// auth
+	e.Use(auth.CreateTokenWithConfig(auth.CreateTokenConfig{
+		Skipper: func(c echo.Context) bool {
+			return strings.Contains(c.Path(), "/api/user/")
+		},
+	}))
+	e.Use(auth.TokenRefresherMiddleware)
+
+	e.Use(echojwt.WithConfig(echojwt.Config{
+		NewClaimsFunc: func(c echo.Context) jwt.Claims {
+			return &auth.Claims{}
+		},
+		Skipper: func(c echo.Context) bool {
+			return !strings.Contains(c.Path(), "/api/user/")
+		},
+		SigningKey:    []byte(auth.GetJWTSecret()),
+		SigningMethod: jwt.SigningMethodHS256.Alg(),
+		TokenLookup:   "cookie:access-token", // "<source>:<name>"
+		ErrorHandler:  auth.JWTErrorChecker,
+	}))
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
