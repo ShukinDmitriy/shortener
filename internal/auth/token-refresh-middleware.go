@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func TokenRefresherMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+func TokenRefreshMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		if c.Get("user") == nil {
 			return next(c)
@@ -18,7 +18,6 @@ func TokenRefresherMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		user := &User{
 			ID: claims.ID,
 		}
-		SetUser(user)
 
 		if time.Until(time.Unix(claims.ExpiresAt.Unix(), 0)) < 15*time.Minute {
 			rc, err := c.Cookie(refreshTokenCookieName)
@@ -33,7 +32,7 @@ func TokenRefresherMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 				}
 
 				if tkn != nil && tkn.Valid {
-					_ = GenerateTokensAndSetCookies(user, c)
+					_ = GenerateTokensAndSetCookies(c, user)
 				}
 			}
 		}

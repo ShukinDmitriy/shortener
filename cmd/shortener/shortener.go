@@ -54,7 +54,7 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	events := []*models.Event{{
 		ShortKey:    shortKey,
 		OriginalURL: string(originalURL),
-		UserID:      auth.GetUserID(),
+		UserID:      auth.GetUserID(ctx),
 	}}
 	err = us.URLRepository.Save(ctx.Request().Context(), events)
 
@@ -101,7 +101,7 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 	events := []*models.Event{{
 		ShortKey:    shortKey,
 		OriginalURL: req.URL,
-		UserID:      auth.GetUserID(),
+		UserID:      auth.GetUserID(ctx),
 	}}
 
 	err := us.URLRepository.Save(ctx.Request().Context(), events)
@@ -139,7 +139,7 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 	// заполняем модель ответа
 	var resp []models.CreateResponseBatch
 
-	userID := auth.GetUserID()
+	userID := auth.GetUserID(ctx)
 
 	for _, cr := range req {
 		// проверяем, что пришёл запрос понятного типа
@@ -222,7 +222,7 @@ func (us *URLShortener) HandlePing(ctx echo.Context) error {
 }
 
 func (us *URLShortener) HandleUserURLGet(ctx echo.Context) error {
-	userID := auth.GetUserID()
+	userID := auth.GetUserID(ctx)
 
 	if userID == "" {
 		return ctx.JSON(http.StatusNoContent, nil)

@@ -26,7 +26,7 @@ func CreateTokenWithConfig(config CreateTokenConfig) echo.MiddlewareFunc {
 			}
 
 			storedUser := LoadTestUser()
-			err := GenerateTokensAndSetCookies(storedUser, c)
+			err := GenerateTokensAndSetCookies(c, storedUser)
 
 			if err != nil {
 				return echo.NewHTTPError(http.StatusUnauthorized, "Token is incorrect")

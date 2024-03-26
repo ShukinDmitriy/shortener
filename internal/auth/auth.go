@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"errors"
+	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
@@ -15,8 +17,6 @@ const (
 	jwtRefreshSecretKey    = "some-refresh-secret-key"
 )
 
-var user *User
-
 func GetJWTSecret() string {
 	return jwtSecretKey
 }
@@ -30,52 +30,80 @@ func GetRefreshJWTSecret() string {
 	return jwtRefreshSecretKey
 }
 
-func GenerateTokensAndSetCookies(user *User, c echo.Context) error {
-	accessToken, exp, err := generateAccessToken(user)
+func GenerateTokensAndSetCookies(c echo.Context, user *User) error {
+	accessToken, accessTokenString, exp, err := generateAccessToken(user)
 	if err != nil {
 		return err
 	}
 
-	setTokenCookie(accessTokenCookieName, accessToken, exp, c)
-	setUserCookie(user, exp, c)
-	refreshToken, exp, err := generateRefreshToken(user)
+	setTokenCookie(c, accessTokenCookieName, accessTokenString, exp)
+	c.Set("user", accessToken)
+	setUserCookie(c, user, exp)
+	_, refreshTokenString, exp, err := generateRefreshToken(user)
 	if err != nil {
 		return err
 	}
-	setTokenCookie(refreshTokenCookieName, refreshToken, exp, c)
+	setTokenCookie(c, refreshTokenCookieName, refreshTokenString, exp)
 
 	return nil
 }
 
-func SetUser(newUser *User) {
-	user = newUser
+func GetUserID(c echo.Context) string {
+	if c.Get("user") == nil {
+		return ""
+	}
+	u := c.Get("user").(*jwt.Token)
+
+	claims := u.Claims.(*Claims)
+
+	return claims.ID
 }
 
-func GetUserID() string {
-	if user != nil {
-		return user.ID
+func ParseTokenFunc(c echo.Context, auth string) (interface{}, error) {
+	keyFunc := func(t *jwt.Token) (interface{}, error) {
+		if t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, fmt.Errorf("unexpected jwt signing method=%v", t.Header["alg"])
+		}
+		return []byte(GetJWTSecret()), nil
 	}
 
-	return ""
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(auth, claims, keyFunc)
+	if err != nil {
+		zap.L().Error("ParseTokenFunc ParseWithClaims", zap.String("err", err.Error()))
+		return nil, err
+	}
+	if !token.Valid {
+		zap.L().Error("ParseTokenFunc token invalid")
+		return nil, errors.New("invalid token")
+	}
+	return token, nil
 }
+
 func JWTErrorChecker(c echo.Context, err error) error {
+	if err != nil {
+		zap.L().Error(
+			"JWTErrorChecker",
+			zap.Error(err),
+		)
+	}
+
 	return echo.NewHTTPError(http.StatusUnauthorized, "Unauthorized")
 }
 
-func generateRefreshToken(user *User) (string, time.Time, error) {
+func generateRefreshToken(user *User) (*jwt.Token, string, time.Time, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 
 	return generateToken(user, expirationTime, []byte(GetRefreshJWTSecret()))
 }
 
-func generateAccessToken(user *User) (string, time.Time, error) {
+func generateAccessToken(user *User) (*jwt.Token, string, time.Time, error) {
 	expirationTime := time.Now().Add(1 * time.Hour)
 
 	return generateToken(user, expirationTime, []byte(GetJWTSecret()))
 }
 
-//go:noinline
-func generateToken(user *User, expirationTime time.Time, secret []byte) (string, time.Time, error) {
+func generateToken(user *User, expirationTime time.Time, secret []byte) (*jwt.Token, string, time.Time, error) {
 	claims := &Claims{
 		ID: user.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -87,21 +115,13 @@ func generateToken(user *User, expirationTime time.Time, secret []byte) (string,
 
 	tokenString, err := token.SignedString(secret)
 	if err != nil {
-		return "", time.Now(), err
+		return nil, "", time.Now(), err
 	}
 
-	zap.L().Info(
-		"generateToken",
-		zap.String("userID", user.ID),
-		zap.String("time", expirationTime.String()),
-		zap.String("secret", string(secret)),
-		zap.Any("token", tokenString),
-	)
-
-	return tokenString, expirationTime, nil
+	return token, tokenString, expirationTime, nil
 }
 
-func setTokenCookie(name, token string, expiration time.Time, c echo.Context) {
+func setTokenCookie(c echo.Context, name, token string, expiration time.Time) {
 	cookie := new(http.Cookie)
 	cookie.Name = name
 	cookie.Value = token
@@ -112,7 +132,7 @@ func setTokenCookie(name, token string, expiration time.Time, c echo.Context) {
 	c.SetCookie(cookie)
 }
 
-func setUserCookie(user *User, expiration time.Time, c echo.Context) {
+func setUserCookie(c echo.Context, user *User, expiration time.Time) {
 	cookie := new(http.Cookie)
 	cookie.Name = "user"
 	cookie.Value = user.ID

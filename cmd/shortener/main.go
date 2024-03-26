@@ -9,7 +9,6 @@ import (
 	"github.com/ShukinDmitriy/shortener/internal/logger"
 	internalMiddleware "github.com/ShukinDmitriy/shortener/internal/middleware"
 	"github.com/ShukinDmitriy/shortener/internal/models"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
@@ -123,16 +122,12 @@ func main() {
 
 	// auth
 	e.Use(echojwt.WithConfig(echojwt.Config{
-		NewClaimsFunc: func(c echo.Context) jwt.Claims {
-			return &auth.Claims{}
-		},
 		Skipper: func(c echo.Context) bool {
 			return !strings.Contains(c.Path(), "/api/user/")
 		},
-		SigningKey:    []byte(auth.GetJWTSecret()),
-		SigningMethod: jwt.SigningMethodHS256.Alg(),
-		TokenLookup:   "cookie:access-token", // "<source>:<name>"
-		ErrorHandler:  auth.JWTErrorChecker,
+		TokenLookup:    "cookie:access-token", // "<source>:<name>"
+		ErrorHandler:   auth.JWTErrorChecker,
+		ParseTokenFunc: auth.ParseTokenFunc,
 	}))
 
 	e.Use(auth.CreateTokenWithConfig(auth.CreateTokenConfig{
@@ -140,7 +135,7 @@ func main() {
 			return strings.Contains(c.Path(), "/api/user/")
 		},
 	}))
-	e.Use(auth.TokenRefresherMiddleware)
+	e.Use(auth.TokenRefreshMiddleware)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
