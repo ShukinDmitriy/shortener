@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+# БД postgres
+  db_pgsql:
+    container_name: db_pgsql
+    build:
+      context: ./postgresql
+    restart: always
+    environment:
+      POSTGRES_USER: application
+      POSTGRES_PASSWORD: password
+    expose:
+      - "5432"
+    volumes:
+      - /tmp/pgsql_data:/var/lib/postgresql/data
+    networks:
+      dev:
+        ipv4_address: 192.168.120.11
+
+# БД mysql
+  db_mysql:
+    container_name: db_mysql
+    build:
+      context: ./mysql
+    restart: always
+    environment:
+      MYSQL_USER: application
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: application
+    expose:
+      - "3306"
+    volumes:
+      - /tmp/mysql_data:/var/lib/mysql
+    networks:
+      dev:
+        ipv4_address: 192.168.120.12
+
+
+volumes:
+  pgsql_data:
+  mysql_data:
+
+networks:
+  dev:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.120.0/24

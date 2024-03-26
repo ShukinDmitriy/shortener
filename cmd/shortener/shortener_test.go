@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"github.com/ShukinDmitriy/shortener/internal/models"
 	"github.com/labstack/echo/v4"
+	"github.com/pashagolub/pgxmock/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -43,9 +46,11 @@ func TestURLShortener_HandleShorten(t *testing.T) {
 		},
 	}
 
-	var shortener = &URLShortener{
-		urls: make(map[string]string),
-	}
+	repository := &models.MemoryURLRepository{}
+	err := repository.Initialize()
+	require.NoError(t, err)
+
+	var shortener = newURLShortener(repository, nil)
 
 	e := echo.New()
 
@@ -131,9 +136,11 @@ func TestURLShortener_HandleCreateShorten(t *testing.T) {
 		},
 	}
 
-	var shortener = &URLShortener{
-		urls: make(map[string]string),
-	}
+	repository := &models.MemoryURLRepository{}
+	err := repository.Initialize()
+	require.NoError(t, err)
+
+	var shortener = newURLShortener(repository, nil)
 
 	e := echo.New()
 
@@ -216,9 +223,11 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 		},
 	}
 
-	var shortener = &URLShortener{
-		urls: make(map[string]string),
-	}
+	repository := &models.MemoryURLRepository{}
+	err := repository.Initialize()
+	require.NoError(t, err)
+
+	var shortener = newURLShortener(repository, nil)
 
 	e := echo.New()
 
@@ -282,4 +291,69 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 		})
 	}
 
+}
+
+func TestURLShortener_HandlePing(t *testing.T) {
+	mockConn, err := pgxmock.NewConn()
+	//mockConn.Ping(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mockConn.Close(context.Background())
+
+	mockConn.ExpectPing().Times(1)
+
+	type want struct {
+		code int
+	}
+	tests := []struct {
+		name string
+		want want
+	}{
+		{
+			name: "positive test #1",
+			want: want{
+				code: 200,
+			},
+		},
+		{
+			name: "negative test #1",
+			want: want{
+				code: 500,
+			},
+		},
+	}
+
+	repository := &models.MemoryURLRepository{}
+	err = repository.Initialize()
+	require.NoError(t, err)
+
+	var shortener = newURLShortener(repository, mockConn)
+
+	e := echo.New()
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/ping", nil)
+
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+
+			err := shortener.HandlePing(c)
+
+			// Assertions
+			if err != nil {
+				res, ok := err.(*echo.HTTPError)
+
+				require.NotNil(t, ok)
+				assert.Equal(t, test.want.code, res.Code)
+			} else {
+				res := rec.Result()
+				defer res.Body.Close()
+
+				assert.Equal(t, test.want.code, res.StatusCode)
+				require.NoError(t, err)
+			}
+		})
+	}
 }

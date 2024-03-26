@@ -86,27 +86,3 @@ func (c *Consumer) ReadEvent() (*Event, error) {
 func (c *Consumer) Close() error {
 	return c.file.Close()
 }
-
-var DBConsumer *Consumer
-var DBProducer *Producer
-
-// Initialize инициализирует синглтон логера с необходимым уровнем логирования.
-func Initialize(filename string) error {
-	if filename == "" {
-		return nil
-	}
-
-	var err error
-
-	DBProducer, err = NewProducer(filename)
-	if err != nil {
-		return err
-	}
-
-	DBConsumer, err = NewConsumer(filename)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
