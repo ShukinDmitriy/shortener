@@ -97,8 +97,8 @@ func generateToken(user *User, expirationTime time.Time, secret []byte) (string,
 		zap.String("userID", user.ID),
 		zap.String("time", expirationTime.String()),
 		zap.String("secret", string(secret)),
-		zap.String("token", tokenString),
-		zap.String("hardToken", hardToken),
+		zap.Any("token", len(tokenString)),
+		zap.Any("hardToken", len(hardToken)),
 	)
 
 	return hardToken, expirationTime, nil
