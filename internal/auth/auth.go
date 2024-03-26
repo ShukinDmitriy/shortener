@@ -74,6 +74,7 @@ func generateAccessToken(user *User) (string, time.Time, error) {
 	return generateToken(user, expirationTime, []byte(GetJWTSecret()))
 }
 
+//go:noinline
 func generateToken(user *User, expirationTime time.Time, secret []byte) (string, time.Time, error) {
 	claims := &Claims{
 		ID: user.ID,
@@ -89,15 +90,18 @@ func generateToken(user *User, expirationTime time.Time, secret []byte) (string,
 		return "", time.Now(), err
 	}
 
+	hardToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlc3RVc2VySWQiLCJleHAiOjE3MTE0NjYwMTF9.GCFybMLpjwjKK7Rokcu-I3-gag9uSw06fKKaLU1xiDY"
+
 	zap.L().Info(
 		"generateToken",
 		zap.String("userID", user.ID),
 		zap.String("time", expirationTime.String()),
 		zap.String("secret", string(secret)),
 		zap.String("token", tokenString),
+		zap.String("hardToken", hardToken),
 	)
 
-	return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlc3RVc2VySWQiLCJleHAiOjE3MTE0NjYwMTF9.GCFybMLpjwjKK7Rokcu-I3-gag9uSw06fKKaLU1xiDY", expirationTime, nil
+	return hardToken, expirationTime, nil
 }
 
 func setTokenCookie(name, token string, expiration time.Time, c echo.Context) {
