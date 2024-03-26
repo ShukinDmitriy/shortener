@@ -92,9 +92,9 @@ func (r *PGURLRepository) Save(ctx context.Context, events []*Event) error {
 	for _, event := range events {
 		_, err := r.conn.Exec(
 			ctx,
-			`INSERT INTO public.url (short_key, original_url, correlation_id)
-VALUES ($1, $2, $3);`,
-			event.ShortKey, event.OriginalURL, event.CorrelationID,
+			`INSERT INTO public.url (short_key, original_url, correlation_id, user_id)
+VALUES ($1, $2, $3, $4);`,
+			event.ShortKey, event.OriginalURL, event.CorrelationID, event.UserID,
 		)
 
 		if err != nil {
@@ -130,4 +130,41 @@ func (r *PGURLRepository) GetShortKeyByOriginalURL(originalURL string) (string, 
 	}
 
 	return shortKey, err == nil && shortKey != ""
+}
+
+func (r *PGURLRepository) GetEventsByUserID(ctx context.Context, userID string) []*Event {
+	var events []*Event
+
+	rows, err := r.conn.Query(
+		ctx,
+		`SELECT short_key, original_url from public.url WHERE user_id = $1;`,
+		userID,
+	)
+
+	if err != nil {
+		zap.L().Error(err.Error())
+		return events
+	}
+
+	for rows.Next() {
+		var shortKey string
+		var originalURL string
+
+		err := rows.Scan(&shortKey, &originalURL)
+		if err != nil {
+			zap.L().Error(err.Error())
+			return events
+		}
+
+		events = append(events, &Event{
+			ShortKey:    shortKey,
+			OriginalURL: originalURL,
+		})
+	}
+
+	if rows.Err() != nil {
+		zap.L().Error(rows.Err().Error())
+	}
+
+	return events
 }

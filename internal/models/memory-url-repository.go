@@ -88,3 +88,14 @@ func (r *MemoryURLRepository) GetShortKeyByOriginalURL(originalURL string) (stri
 
 	return "", false
 }
+
+func (r *MemoryURLRepository) GetEventsByUserID(ctx context.Context, userID string) []*Event {
+	var events []*Event
+	for _, event := range r.urls {
+		if event.UserID == userID {
+			events = append(events, &event)
+		}
+	}
+
+	return events
+}
