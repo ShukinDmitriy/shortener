@@ -3,6 +3,7 @@ package auth
 import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
+	"go.uber.org/zap"
 	"net/http"
 	"time"
 )
@@ -87,6 +88,14 @@ func generateToken(user *User, expirationTime time.Time, secret []byte) (string,
 	if err != nil {
 		return "", time.Now(), err
 	}
+
+	zap.L().Info(
+		"generateToken",
+		zap.String("userID", user.ID),
+		zap.String("time", expirationTime.String()),
+		zap.String("secret", string(secret)),
+		zap.String("token", tokenString),
+	)
 
 	return tokenString, expirationTime, nil
 }
