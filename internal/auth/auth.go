@@ -90,18 +90,15 @@ func generateToken(user *User, expirationTime time.Time, secret []byte) (string,
 		return "", time.Now(), err
 	}
 
-	hardToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlc3RVc2VySWQiLCJleHAiOjE3MTE0NjYwMTF9.GCFybMLpjwjKK7Rokcu-I3-gag9uSw06fKKaLU1xiDY"
-
 	zap.L().Info(
 		"generateToken",
 		zap.String("userID", user.ID),
 		zap.String("time", expirationTime.String()),
 		zap.String("secret", string(secret)),
-		zap.Any("token", len(tokenString)),
-		zap.Any("hardToken", len(hardToken)),
+		zap.Any("token", tokenString),
 	)
 
-	return hardToken, expirationTime, nil
+	return tokenString, expirationTime, nil
 }
 
 func setTokenCookie(name, token string, expiration time.Time, c echo.Context) {
