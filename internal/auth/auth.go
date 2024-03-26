@@ -1,8 +1,6 @@
 package auth
 
 import (
-	"errors"
-	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
@@ -57,27 +55,6 @@ func GetUserID(c echo.Context) string {
 	claims := u.Claims.(*Claims)
 
 	return claims.ID
-}
-
-func ParseTokenFunc(c echo.Context, auth string) (interface{}, error) {
-	keyFunc := func(t *jwt.Token) (interface{}, error) {
-		if t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
-			return nil, fmt.Errorf("unexpected jwt signing method=%v", t.Header["alg"])
-		}
-		return []byte(GetJWTSecret()), nil
-	}
-
-	claims := &Claims{}
-	token, err := jwt.ParseWithClaims(auth, claims, keyFunc)
-	if err != nil {
-		zap.L().Error("ParseTokenFunc ParseWithClaims", zap.String("err", err.Error()))
-		return nil, err
-	}
-	if !token.Valid {
-		zap.L().Error("ParseTokenFunc token invalid")
-		return nil, errors.New("invalid token")
-	}
-	return token, nil
 }
 
 func JWTErrorChecker(c echo.Context, err error) error {
