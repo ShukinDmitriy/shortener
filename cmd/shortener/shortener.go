@@ -20,16 +20,24 @@ type PgxConnPinger interface {
 type URLShortener struct {
 	URLRepository models.URLRepository
 	conn          PgxConnPinger
+
+	// канал для отложенного удаления
+	eDeletedEvent chan models.DeleteRequestBatch
 }
 
 func newURLShortener(
 	urlRepository models.URLRepository,
 	conn PgxConnPinger,
 ) *URLShortener {
-	return &URLShortener{
+	instance := &URLShortener{
 		URLRepository: urlRepository,
 		conn:          conn,
+		eDeletedEvent: make(chan models.DeleteRequestBatch),
 	}
+
+	go instance.deleteEvents()
+
+	return instance
 }
 
 func (us *URLShortener) HandleShorten(ctx echo.Context) error {
@@ -66,7 +74,7 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 
 	if err != nil {
 		ctx.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusBadRequest, "can't save url. internal error")
+		return echo.NewHTTPError(http.StatusBadRequest, "can't save url. internal error1"+err.Error())
 	}
 
 	result := models.PrepareFullURL(ctx, shortKey)
@@ -81,6 +89,8 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 	zap.L().Debug("decoding request")
 	var req models.CreateRequest
 	dec := json.NewDecoder(ctx.Request().Body)
+	defer ctx.Request().Body.Close()
+
 	if err := dec.Decode(&req); err != nil {
 		zap.L().Debug("cannot decode request JSON body", zap.Error(err))
 		return echo.NewHTTPError(http.StatusInternalServerError, "invalid JSON")
@@ -196,14 +206,18 @@ func (us *URLShortener) HandleRedirect(ctx echo.Context) error {
 	}
 
 	// Retrieve the original URL from the `urls` map using the shortened key
-	originalURL, found := us.URLRepository.Get(shortKey)
+	event, found := us.URLRepository.Get(shortKey)
 	if !found {
 		err := "URL not found"
 		ctx.Logger().Error(err)
 		return echo.NewHTTPError(http.StatusNotFound, err)
 	}
 
-	return ctx.Redirect(http.StatusTemporaryRedirect, originalURL)
+	if event.DeletedFlag {
+		return ctx.String(http.StatusGone, "")
+	}
+
+	return ctx.Redirect(http.StatusTemporaryRedirect, event.OriginalURL)
 }
 
 func (us *URLShortener) HandlePing(ctx echo.Context) error {
@@ -241,4 +255,43 @@ func (us *URLShortener) HandleUserURLGet(ctx echo.Context) error {
 	}
 
 	return ctx.JSON(http.StatusOK, resp)
+}
+
+func (us *URLShortener) HandleUserURLDelete(ctx echo.Context) error {
+	req := models.DeleteRequestBatch{
+		UserID:    auth.GetUserID(ctx),
+		ShortKeys: []string{},
+	}
+	dec := json.NewDecoder(ctx.Request().Body)
+	defer ctx.Request().Body.Close()
+
+	if err := dec.Decode(&req.ShortKeys); err != nil {
+		zap.L().Debug("cannot decode request JSON body", zap.Error(err))
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid JSON")
+	}
+
+	zap.L().Info("delete", zap.Any("req", req))
+
+	us.eDeletedEvent <- req
+
+	return ctx.JSON(http.StatusAccepted, "Accepted")
+}
+
+func (us *URLShortener) deleteEvents() {
+	var events []models.DeleteRequestBatch
+
+	for {
+		select {
+		case event := <-us.eDeletedEvent:
+			events = append(events, event)
+			zap.L().Info("before delete", zap.Any("events", events))
+
+			err := us.URLRepository.Delete(context.TODO(), events)
+			if err != nil {
+				zap.L().Error("cannot save events", zap.String("err", err.Error()))
+				continue
+			}
+			events = nil
+		}
+	}
 }

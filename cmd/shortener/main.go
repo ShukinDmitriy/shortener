@@ -74,6 +74,7 @@ func main() {
 	e.POST("/api/shorten/batch", shortener.HandleCreateShortenBatch)
 	e.GET("/ping", shortener.HandlePing)
 	e.GET("/api/user/urls", shortener.HandleUserURLGet)
+	e.DELETE("/api/user/urls", shortener.HandleUserURLDelete)
 
 	//-------------------
 	// middleware
@@ -130,7 +131,7 @@ func main() {
 			return !strings.Contains(c.Path(), "/api/user/")
 		},
 		SigningKey:    []byte(auth.GetJWTSecret()),
-		SigningMethod: jwt.SigningMethodHS256.Alg(),
+		SigningMethod: auth.GetSigningMethod().Alg(),
 		TokenLookup:   "cookie:access-token", // "<source>:<name>"
 		ErrorHandler:  auth.JWTErrorChecker,
 	}))

@@ -15,8 +15,16 @@ const (
 	jwtRefreshSecretKey    = "some-refresh-secret-key"
 )
 
+func GetAccessTokenCookieName() string {
+	return accessTokenCookieName
+}
+
 func GetJWTSecret() string {
 	return jwtSecretKey
+}
+
+func GetSigningMethod() *jwt.SigningMethodHMAC {
+	return jwt.SigningMethodHS256
 }
 
 type Claims struct {
@@ -88,7 +96,7 @@ func generateToken(user *User, expirationTime time.Time, secret []byte) (*jwt.To
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(GetSigningMethod(), claims)
 
 	tokenString, err := token.SignedString(secret)
 	if err != nil {

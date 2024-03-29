@@ -12,6 +12,7 @@ type Event struct {
 	OriginalURL   string `json:"original_url,omitempty"`
 	CorrelationID string `json:"correlation_id,omitempty"`
 	UserID        string `json:"user_id,omitempty"`
+	DeletedFlag   bool   `json:"is_deleted,omitempty"`
 }
 
 func GenerateShortKey() string {

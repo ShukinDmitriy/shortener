@@ -1,0 +1,12 @@
+# curl -v -X POST 'http://localhost:8080'
+DELETE http://localhost:8080/api/user/urls
+Host: localhost:8080
+Content-Type: application/json
+Accept: application/json
+Accept-Encoding: deflate, gzip;q=1.0, *;q=0.5
+
+["SYqDJ3", "4SwGPJ", "z3e7av"]
+
+
+###
+

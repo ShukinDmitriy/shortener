@@ -14,6 +14,11 @@ type CreateRequestBatch struct {
 	OriginalURL   string `json:"original_url"`
 }
 
+type DeleteRequestBatch struct {
+	ShortKeys []string `json:"short_keys"`
+	UserID    string   `json:"user_id"`
+}
+
 type CreateResponse struct {
 	Result string `json:"result"`
 }

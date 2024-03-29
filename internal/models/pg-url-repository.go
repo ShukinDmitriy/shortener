@@ -9,31 +9,31 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 	"os"
 	"path"
+	"strings"
 )
 
 var ErrURLExist = errors.New("URL exist")
 
 type PGURLRepository struct {
-	conn *pgx.Conn
+	pool *pgxpool.Pool
 }
 
 func (r *PGURLRepository) Initialize() error {
 	cont := context.Background()
-	var conn *pgx.Conn
+	var pool *pgxpool.Pool
 	var err error
 
-	conn, err = pgx.Connect(cont, environments.FlagDatabaseDSN)
+	pool, err = pgxpool.New(cont, environments.FlagDatabaseDSN)
 	if err != nil {
 		return err
 	}
-	r.conn = conn
+	r.pool = pool
 
-	// Миграции TODO вынести в отдельный файл
 	currentDir, _ := os.Getwd()
 	zap.L().Info("current dir", zap.String("currentDir", currentDir))
 	db, err := sql.Open("postgres", environments.FlagDatabaseDSN)
@@ -69,28 +69,33 @@ func (r *PGURLRepository) Initialize() error {
 	return nil
 }
 
-func (r *PGURLRepository) Get(shortKey string) (string, bool) {
+func (r *PGURLRepository) Get(shortKey string) (Event, bool) {
 	var originalURL string
+	var isDeleted bool
 
-	row := r.conn.QueryRow(
+	row := r.pool.QueryRow(
 		context.Background(),
-		`SELECT original_url from public.url WHERE short_key = $1;`,
+		`SELECT original_url, is_deleted from public.url WHERE short_key = $1;`,
 		shortKey,
 	)
 
-	err := row.Scan(&originalURL)
+	err := row.Scan(&originalURL, &isDeleted)
 	if err != nil {
 		zap.L().Error(err.Error())
 	}
 
-	return originalURL, err == nil && originalURL != ""
+	return Event{
+		ShortKey:    shortKey,
+		OriginalURL: originalURL,
+		DeletedFlag: isDeleted,
+	}, err == nil && originalURL != ""
 }
 
 func (r *PGURLRepository) Save(ctx context.Context, events []*Event) error {
-	errs := []error{}
+	var errs []error
 
 	for _, event := range events {
-		_, err := r.conn.Exec(
+		_, err := r.pool.Exec(
 			ctx,
 			`INSERT INTO public.url (short_key, original_url, correlation_id, user_id)
 VALUES ($1, $2, $3, $4);`,
@@ -115,12 +120,41 @@ VALUES ($1, $2, $3, $4);`,
 	return errors.Join(errs...)
 }
 
+func (r *PGURLRepository) Delete(ctx context.Context, events []DeleteRequestBatch) error {
+	errs := []error{}
+	var shortKeys []string
+
+	for _, deletedEvent := range events {
+		for _, shortKey := range deletedEvent.ShortKeys {
+			shortKeys = append(shortKeys, shortKey)
+		}
+
+		zap.L().Info("before delete1", zap.Any("shortKeys", shortKeys))
+		zap.L().Info("before delete2", zap.Any("shortKeys", deletedEvent.UserID))
+		zap.L().Info("before delete3", zap.Any("shortKeys", strings.Join(shortKeys, ",")))
+
+		_, err := r.pool.Exec(
+			ctx,
+			`UPDATE public.url SET is_deleted = true WHERE user_id = $1 AND short_key = any($2);`,
+			deletedEvent.UserID,
+			shortKeys,
+		)
+
+		if err != nil {
+			zap.L().Error(err.Error())
+			errs = append(errs, err)
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
 func (r *PGURLRepository) GetShortKeyByOriginalURL(originalURL string) (string, bool) {
 	var shortKey string
 
-	row := r.conn.QueryRow(
+	row := r.pool.QueryRow(
 		context.Background(),
-		`SELECT short_key from public.url WHERE original_url = $1;`,
+		`SELECT short_key from public.url WHERE original_url = $1 and is_deleted is false;`,
 		originalURL,
 	)
 
@@ -135,9 +169,9 @@ func (r *PGURLRepository) GetShortKeyByOriginalURL(originalURL string) (string, 
 func (r *PGURLRepository) GetEventsByUserID(ctx context.Context, userID string) []*Event {
 	var events []*Event
 
-	rows, err := r.conn.Query(
+	rows, err := r.pool.Query(
 		ctx,
-		`SELECT short_key, original_url from public.url WHERE user_id = $1;`,
+		`SELECT short_key, original_url from public.url WHERE user_id = $1 and is_deleted is false;`,
 		userID,
 	)
 
