@@ -280,18 +280,14 @@ func (us *URLShortener) HandleUserURLDelete(ctx echo.Context) error {
 func (us *URLShortener) deleteEvents() {
 	var events []models.DeleteRequestBatch
 
-	for {
-		select {
-		case event := <-us.eDeletedEvent:
-			events = append(events, event)
-			zap.L().Info("before delete", zap.Any("events", events))
+	for event := range us.eDeletedEvent {
+		events = append(events, event)
 
-			err := us.URLRepository.Delete(context.TODO(), events)
-			if err != nil {
-				zap.L().Error("cannot save events", zap.String("err", err.Error()))
-				continue
-			}
-			events = nil
+		err := us.URLRepository.Delete(context.TODO(), events)
+		if err != nil {
+			zap.L().Error("cannot save events", zap.String("err", err.Error()))
+			continue
 		}
+		events = nil
 	}
 }

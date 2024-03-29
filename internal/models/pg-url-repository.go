@@ -14,7 +14,6 @@ import (
 	"go.uber.org/zap"
 	"os"
 	"path"
-	"strings"
 )
 
 var ErrURLExist = errors.New("URL exist")
@@ -125,13 +124,7 @@ func (r *PGURLRepository) Delete(ctx context.Context, events []DeleteRequestBatc
 	var shortKeys []string
 
 	for _, deletedEvent := range events {
-		for _, shortKey := range deletedEvent.ShortKeys {
-			shortKeys = append(shortKeys, shortKey)
-		}
-
-		zap.L().Info("before delete1", zap.Any("shortKeys", shortKeys))
-		zap.L().Info("before delete2", zap.Any("shortKeys", deletedEvent.UserID))
-		zap.L().Info("before delete3", zap.Any("shortKeys", strings.Join(shortKeys, ",")))
+		shortKeys = append(shortKeys, deletedEvent.ShortKeys...)
 
 		_, err := r.pool.Exec(
 			ctx,
