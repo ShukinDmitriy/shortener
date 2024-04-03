@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"time"
 )
 
 type PgxConnPinger interface {
@@ -23,6 +24,9 @@ type URLShortener struct {
 
 	// канал для отложенного удаления
 	eDeletedEvent chan models.DeleteRequestBatch
+
+	// канал для уведомления об окончании работы
+	shutdownChan chan chan struct{}
 }
 
 func newURLShortener(
@@ -33,6 +37,7 @@ func newURLShortener(
 		URLRepository: urlRepository,
 		conn:          conn,
 		eDeletedEvent: make(chan models.DeleteRequestBatch),
+		shutdownChan:  make(chan chan struct{}),
 	}
 
 	go instance.deleteEvents()
@@ -277,17 +282,71 @@ func (us *URLShortener) HandleUserURLDelete(ctx echo.Context) error {
 	return ctx.JSON(http.StatusAccepted, "Accepted")
 }
 
+func (us *URLShortener) Shutdown(ctx context.Context) chan struct{} {
+	res := make(chan struct{})
+
+	go func() {
+		defer close(res)
+
+		successShutdown := make(chan struct{})
+		us.shutdownChan <- successShutdown
+
+		<-successShutdown
+		close(successShutdown)
+		res <- struct{}{}
+	}()
+
+	return res
+}
+
 func (us *URLShortener) deleteEvents() {
 	var events []models.DeleteRequestBatch
+	ticker := time.NewTicker(2 * time.Second)
 
-	for event := range us.eDeletedEvent {
-		events = append(events, event)
+	for {
+		select {
+		case event := <-us.eDeletedEvent:
+			events = append(events, event)
+		case success := <-us.shutdownChan:
+			if len(events) == 0 {
+				success <- struct{}{}
+				return
+			}
 
-		err := us.URLRepository.Delete(context.TODO(), events)
-		if err != nil {
-			zap.L().Error("cannot save events", zap.String("err", err.Error()))
-			continue
+			// Сброс на диск очереди на удаление
+			fileProducer, err := models.NewProducer("/tmp/short-deleted-db.json")
+			if err != nil {
+				zap.L().Error("create file backup", zap.String("err", err.Error()))
+				success <- struct{}{}
+				return
+			}
+
+			err = fileProducer.WriteEvent(events)
+			if err != nil {
+				zap.L().Error("backup deleted events", zap.String("err", err.Error()))
+			}
+
+			events = nil
+			success <- struct{}{}
+
+			return
+		case <-ticker.C:
+			if len(events) == 0 {
+				continue
+			}
+
+			copyEvents := make([]models.DeleteRequestBatch, len(events))
+
+			copy(copyEvents, events)
+
+			go func(events []models.DeleteRequestBatch) {
+				err := us.URLRepository.Delete(context.TODO(), events)
+				if err != nil {
+					zap.L().Error("cannot delete events", zap.String("err", err.Error()))
+				}
+			}(copyEvents)
+
+			events = nil
 		}
-		events = nil
 	}
 }

@@ -33,8 +33,8 @@ func NewProducer(filename string) (*Producer, error) {
 	}, nil
 }
 
-func (p *Producer) WriteEvent(event *Event) error {
-	data, err := json.Marshal(&event)
+func (p *Producer) WriteEvent(event interface{}) error {
+	data, err := json.Marshal(event)
 	if err != nil {
 		return err
 	}
