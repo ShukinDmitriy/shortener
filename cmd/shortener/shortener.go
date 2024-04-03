@@ -36,7 +36,7 @@ func newURLShortener(
 	instance := &URLShortener{
 		URLRepository: urlRepository,
 		conn:          conn,
-		eDeletedEvent: make(chan models.DeleteRequestBatch),
+		eDeletedEvent: make(chan models.DeleteRequestBatch, 100),
 		shutdownChan:  make(chan chan struct{}),
 	}
 
