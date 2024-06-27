@@ -17,6 +17,7 @@ import (
 	"github.com/labstack/gommon/log"
 	"go.uber.org/zap"
 	"net/http"
+	_ "net/http/pprof" // подключаем пакет pprof
 	"os"
 	"os/signal"
 	"strings"
@@ -46,6 +47,9 @@ func main() {
 	if err := logger.Initialize(environments.FlagLogLevel); err != nil {
 		return
 	}
+
+	// Профилирование
+	runProf()
 
 	repository, err := urlRepositoryFactory()
 

@@ -11,3 +11,12 @@ migrate-up:
 
 migrate-down:
 	migrate -database ${POSTGRESQL_URL} -path ./db/migrations down 1
+
+pprof-base:
+	go tool pprof -http=":9090" ./profiles/base.pprof
+
+pprof-result:
+	go tool pprof -http=":9090" ./profiles/result.pprof
+
+pprof-dif-mem:
+	pprof -top -diff_base=profiles/base.pprof profiles/result.pprof
