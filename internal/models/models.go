@@ -14,6 +14,11 @@ type CreateRequestBatch struct {
 	OriginalURL   string `json:"original_url"`
 }
 
+type DeleteRequestBatch struct {
+	ShortKeys []string `json:"short_keys"`
+	UserID    string   `json:"user_id"`
+}
+
 type CreateResponse struct {
 	Result string `json:"result"`
 }
@@ -23,10 +28,9 @@ type CreateResponseBatch struct {
 	ShortURL      string `json:"short_url"`
 }
 
-type Event struct {
-	ShortKey      string `json:"short_key"`
-	OriginalURL   string `json:"original_url"`
-	CorrelationID string `json:"correlation_id"`
+type GetUserURLsResponse struct {
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
 }
 
 type Consumer struct {

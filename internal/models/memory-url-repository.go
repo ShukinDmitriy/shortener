@@ -47,14 +47,14 @@ func (r *MemoryURLRepository) Initialize() error {
 	}
 }
 
-func (r *MemoryURLRepository) Get(shortKey string) (string, bool) {
+func (r *MemoryURLRepository) Get(shortKey string) (Event, bool) {
 	// Поиск в памяти
 	var event Event
 	var found = false
 
 	event, found = r.urls[shortKey]
 
-	return event.OriginalURL, found
+	return event, found
 }
 
 func (r *MemoryURLRepository) Save(ctx context.Context, events []*Event) error {
@@ -79,12 +79,49 @@ func (r *MemoryURLRepository) Save(ctx context.Context, events []*Event) error {
 	return nil
 }
 
+func (r *MemoryURLRepository) Delete(ctx context.Context, events []DeleteRequestBatch) error {
+	for _, deleteEvent := range events {
+		for _, shortKey := range deleteEvent.ShortKeys {
+			event := r.urls[shortKey]
+
+			if event.DeletedFlag || event.UserID != deleteEvent.UserID {
+				continue
+			}
+
+			event.DeletedFlag = true
+
+			// Хранение в памяти
+			r.urls[event.ShortKey] = event
+
+			if r.DBProducer == nil {
+				continue
+			}
+
+			// Хранение в файле
+			r.DBProducer.WriteEvent(&event)
+		}
+	}
+
+	return nil
+}
+
 func (r *MemoryURLRepository) GetShortKeyByOriginalURL(originalURL string) (string, bool) {
 	for _, event := range r.urls {
-		if event.OriginalURL == originalURL {
+		if event.OriginalURL == originalURL && !event.DeletedFlag {
 			return event.ShortKey, true
 		}
 	}
 
 	return "", false
+}
+
+func (r *MemoryURLRepository) GetEventsByUserID(ctx context.Context, userID string) []*Event {
+	var events []*Event
+	for _, event := range r.urls {
+		if event.UserID == userID && !event.DeletedFlag {
+			events = append(events, &event)
+		}
+	}
+
+	return events
 }
