@@ -42,14 +42,14 @@ func urlRepositoryFactory() (models.URLRepository, error) {
 }
 
 func main() {
+	// Профилирование
+	runProf()
+
 	environments.ParseFlags()
 
 	if err := logger.Initialize(environments.FlagLogLevel); err != nil {
 		return
 	}
-
-	// Профилирование
-	runProf()
 
 	repository, err := urlRepositoryFactory()
 

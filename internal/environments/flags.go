@@ -2,6 +2,8 @@ package environments
 
 import (
 	"flag"
+	"github.com/joho/godotenv"
+	"github.com/labstack/gommon/log"
 	"os"
 )
 
@@ -45,6 +47,10 @@ func ParseFlags() {
 
 	// парсим переданные серверу аргументы в зарегистрированные переменные
 	flag.Parse()
+
+	if err := godotenv.Load(); err != nil {
+		log.Print("No .env file found")
+	}
 
 	// для случаев, когда в переменной окружения SERVER_ADDRESS присутствует непустое значение,
 	// переопределим адрес запуска сервера,
