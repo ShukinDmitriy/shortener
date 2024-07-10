@@ -1,3 +1,4 @@
+// The package starts the application Shortener
 package main
 
 import (

@@ -15,10 +15,12 @@ import (
 	"go.uber.org/zap"
 )
 
+// PgxConnPinger interface for checking connection to the database
 type PgxConnPinger interface {
 	Ping(context.Context) error
 }
 
+// URLShortener the application
 type URLShortener struct {
 	URLRepository models.URLRepository
 	conn          PgxConnPinger
@@ -30,6 +32,7 @@ type URLShortener struct {
 	shutdownChan chan chan struct{}
 }
 
+// NewURLShortener application's constructor
 func NewURLShortener(
 	urlRepository models.URLRepository,
 	conn PgxConnPinger,
@@ -46,6 +49,7 @@ func NewURLShortener(
 	return instance
 }
 
+// HandleShorten creating a short link
 func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	originalURL, err := io.ReadAll(ctx.Request().Body)
 	defer ctx.Request().Body.Close()
@@ -90,6 +94,7 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	return ctx.String(status, result)
 }
 
+// HandleCreateShorten handler for create short link
 func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 	// десериализуем запрос в структуру модели
 	zap.L().Debug("decoding request")
@@ -140,6 +145,7 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 	return ctx.JSON(status, resp)
 }
 
+// HandleCreateShortenBatch handler for batch create links
 func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 	// десериализуем запрос в структуру модели
 	zap.L().Debug("decoding request")
@@ -203,6 +209,7 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 	return ctx.JSON(status, resp)
 }
 
+// HandleRedirect handler for redirect by short link
 func (us *URLShortener) HandleRedirect(ctx echo.Context) error {
 	shortKey := ctx.Param("id")
 
@@ -226,6 +233,7 @@ func (us *URLShortener) HandleRedirect(ctx echo.Context) error {
 	return ctx.Redirect(http.StatusTemporaryRedirect, event.OriginalURL)
 }
 
+// HandlePing handler for pink db
 func (us *URLShortener) HandlePing(ctx echo.Context) error {
 	if reflect.ValueOf(us.conn).IsNil() {
 		ctx.Logger().Error("No connect to db")
@@ -240,6 +248,7 @@ func (us *URLShortener) HandlePing(ctx echo.Context) error {
 	return ctx.String(http.StatusOK, "OK")
 }
 
+// HandleUserURLGet handler for get user's short links
 func (us *URLShortener) HandleUserURLGet(ctx echo.Context) error {
 	userID := auth.GetUserID(ctx)
 
@@ -262,6 +271,7 @@ func (us *URLShortener) HandleUserURLGet(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, resp)
 }
 
+// HandleUserURLDelete handler for delete short link
 func (us *URLShortener) HandleUserURLDelete(ctx echo.Context) error {
 	req := models.DeleteRequestBatch{
 		UserID:    auth.GetUserID(ctx),
@@ -282,6 +292,7 @@ func (us *URLShortener) HandleUserURLDelete(ctx echo.Context) error {
 	return ctx.JSON(http.StatusAccepted, "Accepted")
 }
 
+// Shutdown function
 func (us *URLShortener) Shutdown(ctx context.Context) chan struct{} {
 	res := make(chan struct{})
 

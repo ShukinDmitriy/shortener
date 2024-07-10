@@ -17,12 +17,15 @@ import (
 	"go.uber.org/zap"
 )
 
+// ErrURLExist default error
 var ErrURLExist = errors.New("URL exist")
 
+// PGURLRepository repository for working with a database
 type PGURLRepository struct {
 	pool *pgxpool.Pool
 }
 
+// Initialize repository
 func (r *PGURLRepository) Initialize() error {
 	cont := context.Background()
 	var pool *pgxpool.Pool
@@ -69,6 +72,7 @@ func (r *PGURLRepository) Initialize() error {
 	return nil
 }
 
+// Get event by short key
 func (r *PGURLRepository) Get(shortKey string) (Event, bool) {
 	var originalURL string
 	var isDeleted bool
@@ -91,6 +95,7 @@ func (r *PGURLRepository) Get(shortKey string) (Event, bool) {
 	}, err == nil && originalURL != ""
 }
 
+// Save batch save events
 func (r *PGURLRepository) Save(ctx context.Context, events []*Event) error {
 	var errs []error
 
@@ -119,6 +124,7 @@ VALUES ($1, $2, $3, $4);`,
 	return errors.Join(errs...)
 }
 
+// Delete batch delete event
 func (r *PGURLRepository) Delete(ctx context.Context, events []DeleteRequestBatch) error {
 	errs := []error{}
 	var shortKeys []string
@@ -141,6 +147,7 @@ func (r *PGURLRepository) Delete(ctx context.Context, events []DeleteRequestBatc
 	return errors.Join(errs...)
 }
 
+// GetShortKeyByOriginalURL get short link from full link
 func (r *PGURLRepository) GetShortKeyByOriginalURL(originalURL string) (string, bool) {
 	var shortKey string
 
@@ -158,6 +165,7 @@ func (r *PGURLRepository) GetShortKeyByOriginalURL(originalURL string) (string, 
 	return shortKey, err == nil && shortKey != ""
 }
 
+// GetEventsByUserID get events by user ID
 func (r *PGURLRepository) GetEventsByUserID(ctx context.Context, userID string) []*Event {
 	var events []*Event
 

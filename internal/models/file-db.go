@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// NewProducer create producer
 func NewProducer(filename string) (*Producer, error) {
 	dirPaths := strings.Split(filename, string(filepath.Separator))
 
@@ -33,6 +34,7 @@ func NewProducer(filename string) (*Producer, error) {
 	}, nil
 }
 
+// WriteEvent to the file
 func (p *Producer) WriteEvent(event interface{}) error {
 	data, err := json.Marshal(event)
 	if err != nil {
@@ -53,6 +55,7 @@ func (p *Producer) WriteEvent(event interface{}) error {
 	return p.writer.Flush()
 }
 
+// NewConsumer create consumer
 func NewConsumer(filename string) (*Consumer, error) {
 	file, err := os.OpenFile(filename, os.O_RDONLY|os.O_CREATE, 0o666)
 	if err != nil {
@@ -66,6 +69,7 @@ func NewConsumer(filename string) (*Consumer, error) {
 	}, nil
 }
 
+// ReadEvent from file
 func (c *Consumer) ReadEvent() (*Event, error) {
 	// одиночное сканирование до следующей строки
 	if !c.scanner.Scan() {
@@ -83,6 +87,7 @@ func (c *Consumer) ReadEvent() (*Event, error) {
 	return &event, nil
 }
 
+// Close the file
 func (c *Consumer) Close() error {
 	return c.file.Close()
 }

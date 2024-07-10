@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// RequestInfo middleware for logging request
 func RequestInfo(logger *zap.Logger) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {

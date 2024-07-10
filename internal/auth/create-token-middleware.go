@@ -9,10 +9,12 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
+// CreateTokenConfig struct
 type CreateTokenConfig struct {
 	Skipper middleware.Skipper
 }
 
+// CreateTokenWithConfig create middleware with config
 func CreateTokenWithConfig(config CreateTokenConfig) echo.MiddlewareFunc {
 	if config.Skipper == nil {
 		config.Skipper = DefaultSkipper
@@ -61,6 +63,7 @@ func CreateTokenWithConfig(config CreateTokenConfig) echo.MiddlewareFunc {
 	}
 }
 
+// DefaultSkipper skipper function
 func DefaultSkipper(echo.Context) bool {
 	return false
 }
