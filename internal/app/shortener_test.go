@@ -190,8 +190,8 @@ func TestURLShortener_HandleCreateShortenBatch(t *testing.T) {
 		contentType string
 	}
 	type bodyItem struct {
-		CorrelationId string `json:"correlation_id"`
-		OriginalUrl   string `json:"original_url"`
+		CorrelationID string `json:"correlation_id"`
+		OriginalURL   string `json:"original_url"`
 	}
 	tests := []struct {
 		name string
@@ -206,16 +206,16 @@ func TestURLShortener_HandleCreateShortenBatch(t *testing.T) {
 			},
 			body: []bodyItem{
 				{
-					CorrelationId: "847b5414-7f41-4363-be2a-e316fbfc2b33",
-					OriginalUrl:   "https://practicum.yandex.ru",
+					CorrelationID: "847b5414-7f41-4363-be2a-e316fbfc2b33",
+					OriginalURL:   "https://practicum.yandex.ru",
 				},
 				{
-					CorrelationId: "022d3f81-2fb5-4fda-bb19-e89bad595b09",
-					OriginalUrl:   "https://yandex.ru",
+					CorrelationID: "022d3f81-2fb5-4fda-bb19-e89bad595b09",
+					OriginalURL:   "https://yandex.ru",
 				},
 				{
-					CorrelationId: "847b5414-7f41-4363-be2a-e316fbfc2b33",
-					OriginalUrl:   "https://music.yandex.ru",
+					CorrelationID: "847b5414-7f41-4363-be2a-e316fbfc2b33",
+					OriginalURL:   "https://music.yandex.ru",
 				},
 			},
 		},
