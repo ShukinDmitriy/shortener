@@ -1,8 +1,9 @@
-package main
+package app_test
 
 import (
 	"context"
 	"encoding/json"
+	"github.com/ShukinDmitriy/shortener/internal/app"
 	"github.com/ShukinDmitriy/shortener/internal/models"
 	"github.com/labstack/echo/v4"
 	"github.com/pashagolub/pgxmock/v3"
@@ -50,7 +51,7 @@ func TestURLShortener_HandleShorten(t *testing.T) {
 	err := repository.Initialize()
 	require.NoError(t, err)
 
-	var shortener = newURLShortener(repository, nil)
+	var shortener = app.NewURLShortener(repository, nil)
 
 	e := echo.New()
 
@@ -140,7 +141,7 @@ func TestURLShortener_HandleCreateShorten(t *testing.T) {
 	err := repository.Initialize()
 	require.NoError(t, err)
 
-	var shortener = newURLShortener(repository, nil)
+	var shortener = app.NewURLShortener(repository, nil)
 
 	e := echo.New()
 
@@ -176,6 +177,89 @@ func TestURLShortener_HandleCreateShorten(t *testing.T) {
 				assert.Equal(t, test.want.code, res.StatusCode)
 				require.NoError(t, err)
 				assert.Contains(t, data.Result, test.want.response)
+				assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
+			}
+		})
+	}
+}
+
+func TestURLShortener_HandleCreateShortenBatch(t *testing.T) {
+	type want struct {
+		code        int
+		response    string
+		contentType string
+	}
+	type bodyItem struct {
+		CorrelationId string `json:"correlation_id"`
+		OriginalUrl   string `json:"original_url"`
+	}
+	tests := []struct {
+		name string
+		want want
+		body []bodyItem
+	}{
+		{
+			name: "positive test #1",
+			want: want{
+				code:        201,
+				contentType: "application/json; charset=UTF-8",
+			},
+			body: []bodyItem{
+				{
+					CorrelationId: "847b5414-7f41-4363-be2a-e316fbfc2b33",
+					OriginalUrl:   "https://practicum.yandex.ru",
+				},
+				{
+					CorrelationId: "022d3f81-2fb5-4fda-bb19-e89bad595b09",
+					OriginalUrl:   "https://yandex.ru",
+				},
+				{
+					CorrelationId: "847b5414-7f41-4363-be2a-e316fbfc2b33",
+					OriginalUrl:   "https://music.yandex.ru",
+				},
+			},
+		},
+	}
+
+	repository := &models.MemoryURLRepository{}
+	err := repository.Initialize()
+	require.NoError(t, err)
+
+	var shortener = app.NewURLShortener(repository, nil)
+
+	e := echo.New()
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			stringBody, _ := json.Marshal(test.body)
+			req := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", strings.NewReader(string(stringBody)))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+
+			err := shortener.HandleCreateShortenBatch(c)
+
+			// Assertions
+			if err != nil {
+				res, ok := err.(*echo.HTTPError)
+
+				require.NotNil(t, ok)
+				assert.Equal(t, test.want.code, res.Code)
+
+				resBody := res.Message
+				assert.Contains(t, resBody, test.want.response)
+			} else {
+				res := rec.Result()
+				defer res.Body.Close()
+
+				body := rec.Body.Bytes()
+				var data []bodyItem
+				json.Unmarshal(body, &data)
+
+				assert.Equal(t, test.want.code, res.StatusCode)
+				require.NoError(t, err)
+				assert.Equal(t, len(data), len(test.body))
 				assert.Equal(t, test.want.contentType, res.Header.Get("Content-Type"))
 			}
 		})
@@ -227,7 +311,7 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 	err := repository.Initialize()
 	require.NoError(t, err)
 
-	var shortener = newURLShortener(repository, nil)
+	var shortener = app.NewURLShortener(repository, nil)
 
 	e := echo.New()
 
@@ -328,7 +412,7 @@ func TestURLShortener_HandlePing(t *testing.T) {
 	err = repository.Initialize()
 	require.NoError(t, err)
 
-	var shortener = newURLShortener(repository, mockConn)
+	var shortener = app.NewURLShortener(repository, mockConn)
 
 	e := echo.New()
 

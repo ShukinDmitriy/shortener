@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ShukinDmitriy/shortener/internal/app"
 	"github.com/ShukinDmitriy/shortener/internal/auth"
 	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"github.com/ShukinDmitriy/shortener/internal/logger"
@@ -43,7 +44,7 @@ func urlRepositoryFactory() (models.URLRepository, error) {
 
 func main() {
 	// Профилирование
-	runProf()
+	//runProf()
 
 	environments.ParseFlags()
 
@@ -66,7 +67,7 @@ func main() {
 		defer conn.Close(context.Background())
 	}
 
-	var shortener = newURLShortener(repository, conn)
+	var shortener = app.NewURLShortener(repository, conn)
 
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)

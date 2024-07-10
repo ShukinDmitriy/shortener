@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -29,7 +29,7 @@ type URLShortener struct {
 	shutdownChan chan chan struct{}
 }
 
-func newURLShortener(
+func NewURLShortener(
 	urlRepository models.URLRepository,
 	conn PgxConnPinger,
 ) *URLShortener {

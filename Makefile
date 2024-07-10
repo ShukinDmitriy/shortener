@@ -20,3 +20,6 @@ pprof-result:
 
 pprof-dif-mem:
 	go tool pprof -top -diff_base=./profiles/base.pprof ./profiles/result.pprof
+
+test-cover:
+	go test -v -coverprofile=coverage.out ./internal/* && go tool cover -html=coverage.out -o coverage.html
