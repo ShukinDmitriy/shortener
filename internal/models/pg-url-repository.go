@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"os"
+	"path"
+
 	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -12,8 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
-	"os"
-	"path"
 )
 
 var ErrURLExist = errors.New("URL exist")
@@ -100,7 +101,6 @@ func (r *PGURLRepository) Save(ctx context.Context, events []*Event) error {
 VALUES ($1, $2, $3, $4);`,
 			event.ShortKey, event.OriginalURL, event.CorrelationID, event.UserID,
 		)
-
 		if err != nil {
 			zap.L().Error(err.Error())
 
@@ -132,7 +132,6 @@ func (r *PGURLRepository) Delete(ctx context.Context, events []DeleteRequestBatc
 			deletedEvent.UserID,
 			shortKeys,
 		)
-
 		if err != nil {
 			zap.L().Error(err.Error())
 			errs = append(errs, err)
@@ -167,7 +166,6 @@ func (r *PGURLRepository) GetEventsByUserID(ctx context.Context, userID string) 
 		`SELECT short_key, original_url from public.url WHERE user_id = $1 and is_deleted is false;`,
 		userID,
 	)
-
 	if err != nil {
 		zap.L().Error(err.Error())
 		return events

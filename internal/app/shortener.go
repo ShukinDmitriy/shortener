@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/ShukinDmitriy/shortener/internal/auth"
-	"github.com/ShukinDmitriy/shortener/internal/models"
-	"github.com/labstack/echo/v4"
-	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"reflect"
 	"time"
+
+	"github.com/ShukinDmitriy/shortener/internal/auth"
+	"github.com/ShukinDmitriy/shortener/internal/models"
+	"github.com/labstack/echo/v4"
+	"go.uber.org/zap"
 )
 
 type PgxConnPinger interface {
@@ -231,7 +232,6 @@ func (us *URLShortener) HandlePing(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal Server Error")
 	}
 	err := us.conn.Ping(ctx.Request().Context())
-
 	if err != nil {
 		ctx.Logger().Error("Lost connect to db")
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal Server Error")

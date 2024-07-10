@@ -1,11 +1,12 @@
 package models
 
 import (
-	"github.com/ShukinDmitriy/shortener/internal/environments"
-	"github.com/labstack/echo/v4"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/ShukinDmitriy/shortener/internal/environments"
+	"github.com/labstack/echo/v4"
 )
 
 func TestGenerateShortKey(t *testing.T) {

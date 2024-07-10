@@ -2,9 +2,10 @@ package environments
 
 import (
 	"flag"
+	"os"
+
 	"github.com/joho/godotenv"
 	"github.com/labstack/gommon/log"
-	"os"
 )
 
 // неэкспортированная переменная FlagRunAddr содержит адрес и порт для запуска сервера

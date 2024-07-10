@@ -1,10 +1,11 @@
 package models
 
 import (
-	"github.com/ShukinDmitriy/shortener/internal/environments"
-	"github.com/labstack/echo/v4"
 	"math/rand"
 	"time"
+
+	"github.com/ShukinDmitriy/shortener/internal/environments"
+	"github.com/labstack/echo/v4"
 )
 
 type Event struct {

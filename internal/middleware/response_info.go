@@ -1,9 +1,10 @@
 package middleware
 
 import (
+	"strconv"
+
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
-	"strconv"
 )
 
 func ResponseInfo(logger *zap.Logger) echo.MiddlewareFunc {

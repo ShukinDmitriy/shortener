@@ -2,10 +2,11 @@ package auth
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"net/http"
 )
 
 type CreateTokenConfig struct {
@@ -51,7 +52,6 @@ func CreateTokenWithConfig(config CreateTokenConfig) echo.MiddlewareFunc {
 
 			storedUser := LoadTestUser()
 			err = GenerateTokensAndSetCookies(c, storedUser)
-
 			if err != nil {
 				return echo.NewHTTPError(http.StatusUnauthorized, "Token is incorrect")
 			}

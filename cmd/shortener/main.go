@@ -4,6 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"strings"
+	"time"
+
 	"github.com/ShukinDmitriy/shortener/internal/app"
 	"github.com/ShukinDmitriy/shortener/internal/auth"
 	"github.com/ShukinDmitriy/shortener/internal/environments"
@@ -17,12 +24,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 	"go.uber.org/zap"
-	"net/http"
-	_ "net/http/pprof" // подключаем пакет pprof
-	"os"
-	"os/signal"
-	"strings"
-	"time"
+	// подключаем пакет pprof
 )
 
 func urlRepositoryFactory() (models.URLRepository, error) {
@@ -44,7 +46,7 @@ func urlRepositoryFactory() (models.URLRepository, error) {
 
 func main() {
 	// Профилирование
-	//runProf()
+	// runProf()
 
 	environments.ParseFlags()
 
@@ -53,7 +55,6 @@ func main() {
 	}
 
 	repository, err := urlRepositoryFactory()
-
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -67,7 +68,7 @@ func main() {
 		defer conn.Close(context.Background())
 	}
 
-	var shortener = app.NewURLShortener(repository, conn)
+	shortener := app.NewURLShortener(repository, conn)
 
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)

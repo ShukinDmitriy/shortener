@@ -3,17 +3,18 @@ package app_test
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
 	"github.com/ShukinDmitriy/shortener/internal/app"
 	"github.com/ShukinDmitriy/shortener/internal/models"
 	"github.com/labstack/echo/v4"
 	"github.com/pashagolub/pgxmock/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
 )
 
 func TestURLShortener_HandleShorten(t *testing.T) {
@@ -51,7 +52,7 @@ func TestURLShortener_HandleShorten(t *testing.T) {
 	err := repository.Initialize()
 	require.NoError(t, err)
 
-	var shortener = app.NewURLShortener(repository, nil)
+	shortener := app.NewURLShortener(repository, nil)
 
 	e := echo.New()
 
@@ -141,7 +142,7 @@ func TestURLShortener_HandleCreateShorten(t *testing.T) {
 	err := repository.Initialize()
 	require.NoError(t, err)
 
-	var shortener = app.NewURLShortener(repository, nil)
+	shortener := app.NewURLShortener(repository, nil)
 
 	e := echo.New()
 
@@ -225,7 +226,7 @@ func TestURLShortener_HandleCreateShortenBatch(t *testing.T) {
 	err := repository.Initialize()
 	require.NoError(t, err)
 
-	var shortener = app.NewURLShortener(repository, nil)
+	shortener := app.NewURLShortener(repository, nil)
 
 	e := echo.New()
 
@@ -311,7 +312,7 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 	err := repository.Initialize()
 	require.NoError(t, err)
 
-	var shortener = app.NewURLShortener(repository, nil)
+	shortener := app.NewURLShortener(repository, nil)
 
 	e := echo.New()
 
@@ -374,12 +375,11 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestURLShortener_HandlePing(t *testing.T) {
 	mockConn, err := pgxmock.NewConn()
-	//mockConn.Ping(context.Background())
+	// mockConn.Ping(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -412,7 +412,7 @@ func TestURLShortener_HandlePing(t *testing.T) {
 	err = repository.Initialize()
 	require.NoError(t, err)
 
-	var shortener = app.NewURLShortener(repository, mockConn)
+	shortener := app.NewURLShortener(repository, mockConn)
 
 	e := echo.New()
 

@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+
 	"github.com/ShukinDmitriy/shortener/internal/environments"
 )
 
@@ -50,7 +51,7 @@ func (r *MemoryURLRepository) Initialize() error {
 func (r *MemoryURLRepository) Get(shortKey string) (Event, bool) {
 	// Поиск в памяти
 	var event Event
-	var found = false
+	found := false
 
 	event, found = r.urls[shortKey]
 

@@ -1,8 +1,9 @@
 package models_test
 
 import (
-	"github.com/ShukinDmitriy/shortener/internal/models"
 	"testing"
+
+	"github.com/ShukinDmitriy/shortener/internal/models"
 )
 
 func BenchmarkMemoryURLRepository_Initialize(b *testing.B) {
@@ -13,5 +14,4 @@ func BenchmarkMemoryURLRepository_Initialize(b *testing.B) {
 			_ = repository.Initialize()
 		}
 	})
-
 }
