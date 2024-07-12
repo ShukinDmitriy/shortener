@@ -1,3 +1,4 @@
+// Package app shortener application
 package app
 
 import (

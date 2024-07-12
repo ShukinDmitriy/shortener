@@ -23,3 +23,6 @@ pprof-dif-mem:
 
 test-cover:
 	go test -v -coverprofile=coverage.out ./internal/* && go tool cover -html=coverage.out -o coverage.html
+
+static-check:
+	go vet ./cmd/... ./internal/...

@@ -30,14 +30,14 @@ func CreateTokenWithConfig(config CreateTokenConfig) echo.MiddlewareFunc {
 
 			if err == nil && accessTokenCookie != nil {
 				claims := &Claims{}
-				token, err := jwt.ParseWithClaims(accessTokenCookie.Value, claims,
+				token, err1 := jwt.ParseWithClaims(accessTokenCookie.Value, claims,
 					func(t *jwt.Token) (interface{}, error) {
 						if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 							return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 						}
 						return []byte(GetJWTSecret()), nil
 					})
-				if err != nil {
+				if err1 != nil {
 					return echo.NewHTTPError(http.StatusUnauthorized, "Token is incorrect")
 				}
 

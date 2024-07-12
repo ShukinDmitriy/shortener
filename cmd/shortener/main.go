@@ -47,11 +47,12 @@ func urlRepositoryFactory() (models.URLRepository, error) {
 
 func main() {
 	// Профилирование
-	// runProf()
+	runProf()
 
 	environments.ParseFlags()
 
 	if err := logger.Initialize(environments.FlagLogLevel); err != nil {
+		fmt.Println(err)
 		return
 	}
 

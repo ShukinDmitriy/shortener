@@ -1,3 +1,4 @@
+// Package models some models and repositories for application
 package models
 
 import (
