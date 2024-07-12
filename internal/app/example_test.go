@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ShukinDmitriy/shortener/internal/app"
+	"github.com/ShukinDmitriy/shortener/internal/auth"
 	"github.com/ShukinDmitriy/shortener/internal/models"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -36,7 +37,8 @@ func Example() {
 	if err != nil {
 		panic(err)
 	}
-	shortener := app.NewURLShortener(repository, nil)
+	authService := auth.NewAuthService()
+	shortener := app.NewURLShortener(repository, nil, authService)
 
 	e := echo.New()
 	stringBody, _ := json.Marshal(body)

@@ -21,6 +21,10 @@ pprof-result:
 pprof-dif-mem:
 	go tool pprof -top -diff_base=./profiles/base.pprof ./profiles/result.pprof
 
+build-mocks:
+	@go get github.com/vektra/mockery/v2@v2.43.2
+	@~/go/bin/mockery
+
 test-cover:
 	go test -v -coverprofile=coverage.out ./internal/* && go tool cover -html=coverage.out -o coverage.html
 

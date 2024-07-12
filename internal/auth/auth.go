@@ -62,8 +62,15 @@ func GenerateTokensAndSetCookies(c echo.Context, user *User) error {
 	return nil
 }
 
+type AuthService struct {
+}
+
+func NewAuthService() *AuthService {
+	return &AuthService{}
+}
+
 // GetUserID get user
-func GetUserID(c echo.Context) string {
+func (authService *AuthService) GetUserID(c echo.Context) string {
 	if c.Get("user") == nil {
 		return ""
 	}

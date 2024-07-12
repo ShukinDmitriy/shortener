@@ -70,7 +70,9 @@ func main() {
 		defer conn.Close(context.Background())
 	}
 
-	shortener := app.NewURLShortener(repository, conn)
+	authService := auth.NewAuthService()
+
+	shortener := app.NewURLShortener(repository, conn, authService)
 
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)

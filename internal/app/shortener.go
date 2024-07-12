@@ -26,6 +26,8 @@ type URLShortener struct {
 	URLRepository models.URLRepository
 	conn          PgxConnPinger
 
+	authService auth.AuthServiceInterface
+
 	// канал для отложенного удаления
 	eDeletedEvent chan models.DeleteRequestBatch
 
@@ -37,10 +39,12 @@ type URLShortener struct {
 func NewURLShortener(
 	urlRepository models.URLRepository,
 	conn PgxConnPinger,
+	authService auth.AuthServiceInterface,
 ) *URLShortener {
 	instance := &URLShortener{
 		URLRepository: urlRepository,
 		conn:          conn,
+		authService:   authService,
 		eDeletedEvent: make(chan models.DeleteRequestBatch, 100),
 		shutdownChan:  make(chan chan struct{}),
 	}
@@ -73,7 +77,7 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	events := []*models.Event{{
 		ShortKey:    shortKey,
 		OriginalURL: string(originalURL),
-		UserID:      auth.GetUserID(ctx),
+		UserID:      us.authService.GetUserID(ctx),
 	}}
 	err = us.URLRepository.Save(ctx.Request().Context(), events)
 
@@ -123,7 +127,7 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 	events := []*models.Event{{
 		ShortKey:    shortKey,
 		OriginalURL: req.URL,
-		UserID:      auth.GetUserID(ctx),
+		UserID:      us.authService.GetUserID(ctx),
 	}}
 
 	err := us.URLRepository.Save(ctx.Request().Context(), events)
@@ -162,7 +166,7 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 	// заполняем модель ответа
 	var resp []models.CreateResponseBatch
 
-	userID := auth.GetUserID(ctx)
+	userID := us.authService.GetUserID(ctx)
 
 	for _, cr := range req {
 		// проверяем, что пришёл запрос понятного типа
@@ -251,7 +255,7 @@ func (us *URLShortener) HandlePing(ctx echo.Context) error {
 
 // HandleUserURLGet handler for get user's short links
 func (us *URLShortener) HandleUserURLGet(ctx echo.Context) error {
-	userID := auth.GetUserID(ctx)
+	userID := us.authService.GetUserID(ctx)
 
 	if userID == "" {
 		return ctx.JSON(http.StatusNoContent, nil)
@@ -275,7 +279,7 @@ func (us *URLShortener) HandleUserURLGet(ctx echo.Context) error {
 // HandleUserURLDelete handler for delete short link
 func (us *URLShortener) HandleUserURLDelete(ctx echo.Context) error {
 	req := models.DeleteRequestBatch{
-		UserID:    auth.GetUserID(ctx),
+		UserID:    us.authService.GetUserID(ctx),
 		ShortKeys: []string{},
 	}
 	dec := json.NewDecoder(ctx.Request().Body)
