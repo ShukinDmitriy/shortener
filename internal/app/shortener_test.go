@@ -3,18 +3,20 @@ package app_test
 import (
 	"context"
 	"encoding/json"
+	"github.com/ShukinDmitriy/shortener/internal/app"
+	"github.com/ShukinDmitriy/shortener/internal/models"
+	"github.com/ShukinDmitriy/shortener/mocks/internal_/auth"
+	models2 "github.com/ShukinDmitriy/shortener/mocks/internal_/models"
+	"github.com/labstack/echo/v4"
+	"github.com/pashagolub/pgxmock/v3"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/ShukinDmitriy/shortener/internal/app"
-	"github.com/ShukinDmitriy/shortener/internal/models"
-	"github.com/labstack/echo/v4"
-	"github.com/pashagolub/pgxmock/v3"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"time"
 )
 
 func TestURLShortener_HandleShorten(t *testing.T) {
@@ -51,8 +53,9 @@ func TestURLShortener_HandleShorten(t *testing.T) {
 	repository := &models.MemoryURLRepository{}
 	err := repository.Initialize()
 	require.NoError(t, err)
+	authService := new(auth.AuthServiceInterface)
 
-	shortener := app.NewURLShortener(repository, nil)
+	shortener := app.NewURLShortener(repository, nil, authService)
 
 	e := echo.New()
 
@@ -61,6 +64,7 @@ func TestURLShortener_HandleShorten(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.body))
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
+			authService.EXPECT().GetUserID(c).Return("")
 
 			err := shortener.HandleShorten(c)
 
@@ -141,8 +145,9 @@ func TestURLShortener_HandleCreateShorten(t *testing.T) {
 	repository := &models.MemoryURLRepository{}
 	err := repository.Initialize()
 	require.NoError(t, err)
+	authService := new(auth.AuthServiceInterface)
 
-	shortener := app.NewURLShortener(repository, nil)
+	shortener := app.NewURLShortener(repository, nil, authService)
 
 	e := echo.New()
 
@@ -153,6 +158,7 @@ func TestURLShortener_HandleCreateShorten(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
+			authService.EXPECT().GetUserID(c).Return("")
 
 			err := shortener.HandleCreateShorten(c)
 
@@ -225,8 +231,9 @@ func TestURLShortener_HandleCreateShortenBatch(t *testing.T) {
 	repository := &models.MemoryURLRepository{}
 	err := repository.Initialize()
 	require.NoError(t, err)
+	authService := new(auth.AuthServiceInterface)
 
-	shortener := app.NewURLShortener(repository, nil)
+	shortener := app.NewURLShortener(repository, nil, authService)
 
 	e := echo.New()
 
@@ -238,6 +245,7 @@ func TestURLShortener_HandleCreateShortenBatch(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
+			authService.EXPECT().GetUserID(c).Return("")
 
 			err := shortener.HandleCreateShortenBatch(c)
 
@@ -311,8 +319,9 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 	repository := &models.MemoryURLRepository{}
 	err := repository.Initialize()
 	require.NoError(t, err)
+	authService := new(auth.AuthServiceInterface)
 
-	shortener := app.NewURLShortener(repository, nil)
+	shortener := app.NewURLShortener(repository, nil, authService)
 
 	e := echo.New()
 
@@ -325,6 +334,8 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 
 				rec := httptest.NewRecorder()
 				c := e.NewContext(req, rec)
+				authService.EXPECT().GetUserID(c).Return("")
+				//repository.Save(c.Request().Context(), events)
 
 				shortener.HandleShorten(c)
 
@@ -408,11 +419,10 @@ func TestURLShortener_HandlePing(t *testing.T) {
 		},
 	}
 
-	repository := &models.MemoryURLRepository{}
-	err = repository.Initialize()
-	require.NoError(t, err)
+	repository := new(models2.URLRepository)
+	authService := new(auth.AuthServiceInterface)
 
-	shortener := app.NewURLShortener(repository, mockConn)
+	shortener := app.NewURLShortener(repository, mockConn, authService)
 
 	e := echo.New()
 
@@ -437,6 +447,218 @@ func TestURLShortener_HandlePing(t *testing.T) {
 
 				assert.Equal(t, test.want.code, res.StatusCode)
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestURLShortener_HandleUserURLGet(t *testing.T) {
+	mockConn, err := pgxmock.NewConn()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mockConn.Close(context.Background())
+
+	type want struct {
+		code int
+	}
+	type args struct {
+		userID string
+		events []*models.Event
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "positive test #1",
+			args: args{
+				userID: "123",
+				events: []*models.Event{
+					{},
+					{},
+				},
+			},
+			want: want{
+				code: 200,
+			},
+		},
+		{
+			name: "positive test #2",
+			args: args{
+				userID: "124",
+			},
+			want: want{
+				code: 200,
+			},
+		},
+		{
+			name: "positive test #3",
+			args: args{
+				userID: "",
+			},
+			want: want{
+				code: 204,
+			},
+		},
+	}
+
+	repository := new(models2.URLRepository)
+	authService := new(auth.AuthServiceInterface)
+
+	shortener := app.NewURLShortener(repository, mockConn, authService)
+
+	e := echo.New()
+
+	for _, test := range tests {
+		userID := test.args.userID
+		events := test.args.events
+		code := test.want.code
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
+
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+
+			authService.EXPECT().GetUserID(c).Return(userID)
+			repository.EXPECT().GetEventsByUserID(c.Request().Context(), userID).Return(events)
+
+			err := shortener.HandleUserURLGet(c)
+
+			// Assertions
+			if err != nil {
+				res, ok := err.(*echo.HTTPError)
+
+				require.NotNil(t, ok)
+				assert.Equal(t, code, res.Code)
+			} else {
+				res := rec.Result()
+				defer res.Body.Close()
+
+				body := rec.Body.Bytes()
+				var data []models.Event
+				require.NoError(t, json.Unmarshal(body, &data))
+
+				assert.Equal(t, code, res.StatusCode)
+				assert.Equal(t, len(data), len(events))
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestURLShortener_HandleUserURLDelete(t *testing.T) {
+	mockConn, err := pgxmock.NewConn()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mockConn.Close(context.Background())
+
+	mockConn.ExpectPing().Times(1)
+
+	type want struct {
+		code int
+	}
+	type args struct {
+		userID string
+		events []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "positive test #1",
+			args: args{
+				userID: "123",
+				events: []string{"SYqDJ3", "4SwGPJ", "z3e7av"},
+			},
+			want: want{
+				code: 202,
+			},
+		},
+	}
+
+	repository := new(models2.URLRepository)
+	authService := new(auth.AuthServiceInterface)
+
+	shortener := app.NewURLShortener(repository, mockConn, authService)
+
+	e := echo.New()
+
+	for _, test := range tests {
+		userID := test.args.userID
+		events := test.args.events
+		code := test.want.code
+		t.Run(test.name, func(t *testing.T) {
+			stringBody, _ := json.Marshal(test.args.events)
+			req := httptest.NewRequest(http.MethodDelete, "/api/user/urls", strings.NewReader(string(stringBody)))
+
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+
+			authService.EXPECT().GetUserID(c).Return(userID)
+			repository.EXPECT().Delete(context.TODO(), []models.DeleteRequestBatch{
+				{
+					UserID:    userID,
+					ShortKeys: events,
+				},
+			}).Return(nil)
+
+			err := shortener.HandleUserURLDelete(c)
+
+			// Assertions
+			if err != nil {
+				res, ok := err.(*echo.HTTPError)
+
+				require.NotNil(t, ok)
+				assert.Equal(t, code, res.Code)
+			} else {
+				res := rec.Result()
+				defer res.Body.Close()
+
+				assert.Equal(t, code, res.StatusCode)
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestURLShortener_Shutdown(t *testing.T) {
+	mockConn, err := pgxmock.NewConn()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mockConn.Close(context.Background())
+
+	mockConn.ExpectPing().Times(1)
+
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "positive test #1",
+		},
+	}
+
+	repository := new(models2.URLRepository)
+	authService := new(auth.AuthServiceInterface)
+
+	shortener := app.NewURLShortener(repository, mockConn, authService)
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			timeout := time.After(time.Second * 5)
+			sChan := shortener.Shutdown(context.TODO())
+
+			select {
+			case <-timeout:
+				t.Error("Can't wait for the end shutdown")
+			case <-sChan:
+				_, ok := <-sChan
+				assert.Equal(t, false, ok)
 			}
 		})
 	}
