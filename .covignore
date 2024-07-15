@@ -1,0 +1,9 @@
+github.com/ShukinDmitriy/shortener/cmd/shortener/main.go
+github.com/ShukinDmitriy/shortener/cmd/shortener/prof.go
+github.com/ShukinDmitriy/shortener/cmd/staticlint/analysis/osexitcheck/osexitcheck.go
+github.com/ShukinDmitriy/shortener/cmd/staticlint/main.go
+github.com/ShukinDmitriy/shortener/mocks/internal_/app/PgxConnPinger.go
+github.com/ShukinDmitriy/shortener/mocks/internal_/auth/AuthServiceInterface.go
+github.com/ShukinDmitriy/shortener/mocks/internal_/logger/Logger.go
+github.com/ShukinDmitriy/shortener/mocks/internal_/models/URLRepository.go
+github.com/ShukinDmitriy/shortener/test_spec.go

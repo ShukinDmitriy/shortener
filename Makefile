@@ -28,5 +28,8 @@ build-mocks:
 test-cover:
 	go test -v -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html
 
+test-cover-cli:
+	./test-cover.sh
+
 static-check:
 	go vet ./cmd/... ./internal/...
