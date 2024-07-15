@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"github.com/ShukinDmitriy/shortener/internal/logger"
 	"strconv"
+
+	"github.com/ShukinDmitriy/shortener/internal/logger"
 
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"

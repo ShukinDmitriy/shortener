@@ -3,6 +3,13 @@ package app_test
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/ShukinDmitriy/shortener/internal/app"
 	"github.com/ShukinDmitriy/shortener/internal/models"
 	"github.com/ShukinDmitriy/shortener/mocks/internal_/auth"
@@ -11,12 +18,6 @@ import (
 	"github.com/pashagolub/pgxmock/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestURLShortener_HandleShorten(t *testing.T) {
@@ -335,7 +336,7 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 				rec := httptest.NewRecorder()
 				c := e.NewContext(req, rec)
 				authService.EXPECT().GetUserID(c).Return("")
-				//repository.Save(c.Request().Context(), events)
+				// repository.Save(c.Request().Context(), events)
 
 				shortener.HandleShorten(c)
 

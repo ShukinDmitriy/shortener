@@ -1,9 +1,10 @@
 package osexitcheck_test
 
 import (
+	"testing"
+
 	"github.com/ShukinDmitriy/shortener/cmd/staticlint/analysis/osexitcheck"
 	"golang.org/x/tools/go/analysis/analysistest"
-	"testing"
 )
 
 func TestOsExitCheck(t *testing.T) {

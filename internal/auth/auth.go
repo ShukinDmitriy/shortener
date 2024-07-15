@@ -63,8 +63,7 @@ func GenerateTokensAndSetCookies(c echo.Context, user *User) error {
 }
 
 // AuthService service for auth
-type AuthService struct {
-}
+type AuthService struct{}
 
 // NewAuthService constructor for auth service
 func NewAuthService() *AuthService {
