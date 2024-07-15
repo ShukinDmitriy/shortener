@@ -1,8 +1,5 @@
 #!/bin/sh
 
-# gofumpt-staged :)
-for file in $(git diff --name-only | grep .go); do
-    ${GOPATH}/bin/gofumpt -l -w $file
-done
+${GOPATH}/bin/gofumpt -l -w .
 
 git add -u
