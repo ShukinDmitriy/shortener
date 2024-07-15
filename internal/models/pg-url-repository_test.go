@@ -57,6 +57,7 @@ func TestPGURLRepository_CRUD(t *testing.T) {
 		dsn    string
 		events []models.Event
 	}
+	eventShortKey := models.GenerateShortKey()
 	repeatShortKey := models.GenerateShortKey()
 	tests := []struct {
 		name string
@@ -68,19 +69,19 @@ func TestPGURLRepository_CRUD(t *testing.T) {
 				dsn: databaseDSN,
 				events: []models.Event{
 					{
-						OriginalURL: "https://example.com",
+						OriginalURL: "https://" + repeatShortKey + ".com",
 						ShortKey:    repeatShortKey,
-						UserID:      "1",
+						UserID:      repeatShortKey,
 					},
 					{
-						OriginalURL: "https://example.com",
-						ShortKey:    repeatShortKey,
-						UserID:      "2",
-					},
-					{
-						OriginalURL: "https://example1.com",
+						OriginalURL: "https://" + repeatShortKey + ".com",
 						ShortKey:    models.GenerateShortKey(),
-						UserID:      "3",
+						UserID:      models.GenerateShortKey(),
+					},
+					{
+						OriginalURL: "https://" + eventShortKey + ".com",
+						ShortKey:    eventShortKey,
+						UserID:      eventShortKey,
 					},
 				},
 			},
@@ -96,8 +97,12 @@ func TestPGURLRepository_CRUD(t *testing.T) {
 			repository := &models.PGURLRepository{}
 			assert.NoError(t, repository.Initialize())
 
+			originalURLs := make(map[string]bool, 3)
+
 			for _, event := range tt.args.events {
-				assert.NoError(t, repository.Save(context.TODO(), []*models.Event{
+				// notExpectedFound ожидается ли в бд такое событие
+				_, notExpectedFound := originalURLs[event.OriginalURL]
+				err := repository.Save(context.TODO(), []*models.Event{
 					{
 						ShortKey:      event.ShortKey,
 						OriginalURL:   event.OriginalURL,
@@ -105,30 +110,37 @@ func TestPGURLRepository_CRUD(t *testing.T) {
 						UserID:        event.UserID,
 						DeletedFlag:   false,
 					},
-				}))
+				})
+				originalURLs[event.OriginalURL] = true
+
+				if !notExpectedFound {
+					assert.NoError(t, err)
+				}
 
 				getEvent, found := repository.Get(event.ShortKey)
-				assert.True(t, found)
-				assert.Equal(t, event.OriginalURL, getEvent.OriginalURL)
 
-				userEvents := repository.GetEventsByUserID(context.TODO(), event.UserID)
-				assert.Len(t, userEvents, 1)
+				assert.Equal(t, found, !notExpectedFound)
+				if !notExpectedFound {
+					assert.Equal(t, event.OriginalURL, getEvent.OriginalURL)
 
-				shortKey, found := repository.GetShortKeyByOriginalURL(event.OriginalURL)
-				assert.True(t, found)
-				assert.Equal(t, shortKey, event.ShortKey)
+					userEvents := repository.GetEventsByUserID(context.TODO(), event.UserID)
+					assert.Len(t, userEvents, 1)
 
-				assert.NoError(t, repository.Delete(context.TODO(), []models.DeleteRequestBatch{
-					{
-						ShortKeys: []string{event.ShortKey},
-						UserID:    event.UserID,
-					},
-				}))
+					shortKey, found := repository.GetShortKeyByOriginalURL(event.OriginalURL)
+					assert.True(t, found)
+					assert.Equal(t, shortKey, event.ShortKey)
 
-				getEvent, found = repository.Get(event.ShortKey)
-				assert.True(t, found)
-				assert.True(t, getEvent.DeletedFlag)
+					assert.NoError(t, repository.Delete(context.TODO(), []models.DeleteRequestBatch{
+						{
+							ShortKeys: []string{event.ShortKey},
+							UserID:    event.UserID,
+						},
+					}))
 
+					getEvent, found = repository.Get(event.ShortKey)
+					assert.True(t, found)
+					assert.True(t, getEvent.DeletedFlag)
+				}
 			}
 		})
 	}
