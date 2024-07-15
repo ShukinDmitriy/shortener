@@ -6,13 +6,12 @@ import (
 	"errors"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
@@ -38,6 +37,9 @@ func (r *PGURLRepository) Initialize() error {
 	r.pool = pool
 
 	currentDir, _ := os.Getwd()
+	if strings.HasSuffix(currentDir, "/internal/models") {
+		currentDir = strings.TrimSuffix(currentDir, "/internal/models")
+	}
 	db, err := sql.Open("postgres", environments.FlagDatabaseDSN)
 	if err != nil {
 		zap.L().Error("can't connect to db", zap.String("err", err.Error()))
@@ -102,21 +104,12 @@ func (r *PGURLRepository) Save(ctx context.Context, events []*Event) error {
 		_, err := r.pool.Exec(
 			ctx,
 			`INSERT INTO public.url (short_key, original_url, correlation_id, user_id)
-VALUES ($1, $2, $3, $4);`,
+VALUES ($1, $2, $3, $4) ON CONFLICT (original_url) DO UPDATE SET short_key=EXCLUDED.short_key, user_id=EXCLUDED.user_id, is_deleted=false;`,
 			event.ShortKey, event.OriginalURL, event.CorrelationID, event.UserID,
 		)
 		if err != nil {
 			zap.L().Error(err.Error())
-
-			// проверяем, что ошибка сигнализирует о наличие данных в БД
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-				errs = append(errs, ErrURLExist)
-				shortKey, _ := r.GetShortKeyByOriginalURL(event.OriginalURL)
-				event.ShortKey = shortKey
-			} else {
-				return err
-			}
+			errs = append(errs, err)
 		}
 	}
 

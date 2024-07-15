@@ -3,26 +3,14 @@ package models_test
 import (
 	"context"
 	"github.com/ShukinDmitriy/shortener/internal/environments"
-	"github.com/stretchr/testify/assert"
-	"os"
-	"testing"
-
 	"github.com/ShukinDmitriy/shortener/internal/models"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-func BenchmarkMemoryURLRepository_Initialize(b *testing.B) {
-	repository := &models.MemoryURLRepository{}
-
-	b.Run("initialize", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_ = repository.Initialize()
-		}
-	})
-}
-
-func TestMemoryURLRepository_Initialize(t *testing.T) {
+func TestPGURLRepository_Initialize(t *testing.T) {
 	type args struct {
-		filename string
+		dsn string
 	}
 	tests := []struct {
 		name string
@@ -31,32 +19,29 @@ func TestMemoryURLRepository_Initialize(t *testing.T) {
 		{
 			name: "positive test #1",
 			args: args{
-				filename: "./testdata/events.json",
+				dsn: "postgresql://postgres:postgres@192.168.160.11:5432/praktikum?sslmode=disable",
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.args.filename != "" {
-				environments.FlagFileStoragePath = tt.args.filename
+			if tt.args.dsn != "" {
+				environments.FlagDatabaseDSN = tt.args.dsn
 			}
 
-			repository := &models.MemoryURLRepository{}
+			repository := &models.PGURLRepository{}
 			assert.NoError(t, repository.Initialize())
-			if tt.args.filename != "" {
-				assert.FileExists(t, tt.args.filename)
-				_ = os.Remove(tt.args.filename)
-			}
 		})
 	}
 }
 
-func TestMemoryURLRepository_CRUD(t *testing.T) {
+func TestPGURLRepository_CRUD(t *testing.T) {
 	type args struct {
-		filename string
-		events   []models.Event
+		dsn    string
+		events []models.Event
 	}
+	repeatShortKey := models.GenerateShortKey()
 	tests := []struct {
 		name string
 		args args
@@ -64,21 +49,21 @@ func TestMemoryURLRepository_CRUD(t *testing.T) {
 		{
 			name: "positive test #1",
 			args: args{
-				filename: "./events.json",
+				dsn: "postgresql://postgres:postgres@192.168.160.11:5432/praktikum?sslmode=disable",
 				events: []models.Event{
 					{
 						OriginalURL: "https://example.com",
-						ShortKey:    "short1",
+						ShortKey:    repeatShortKey,
 						UserID:      "1",
 					},
 					{
 						OriginalURL: "https://example.com",
-						ShortKey:    "short1",
+						ShortKey:    repeatShortKey,
 						UserID:      "2",
 					},
 					{
 						OriginalURL: "https://example1.com",
-						ShortKey:    "short2",
+						ShortKey:    models.GenerateShortKey(),
 						UserID:      "3",
 					},
 				},
@@ -88,12 +73,11 @@ func TestMemoryURLRepository_CRUD(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.args.filename != "" {
-				environments.FlagFileStoragePath = tt.args.filename
-				defer os.Remove(tt.args.filename)
+			if tt.args.dsn != "" {
+				environments.FlagDatabaseDSN = tt.args.dsn
 			}
 
-			repository := &models.MemoryURLRepository{}
+			repository := &models.PGURLRepository{}
 			assert.NoError(t, repository.Initialize())
 
 			for _, event := range tt.args.events {
@@ -114,6 +98,10 @@ func TestMemoryURLRepository_CRUD(t *testing.T) {
 				userEvents := repository.GetEventsByUserID(context.TODO(), event.UserID)
 				assert.Len(t, userEvents, 1)
 
+				shortKey, found := repository.GetShortKeyByOriginalURL(event.OriginalURL)
+				assert.True(t, found)
+				assert.Equal(t, shortKey, event.ShortKey)
+
 				assert.NoError(t, repository.Delete(context.TODO(), []models.DeleteRequestBatch{
 					{
 						ShortKeys: []string{event.ShortKey},
@@ -124,6 +112,7 @@ func TestMemoryURLRepository_CRUD(t *testing.T) {
 				getEvent, found = repository.Get(event.ShortKey)
 				assert.True(t, found)
 				assert.True(t, getEvent.DeletedFlag)
+
 			}
 		})
 	}
