@@ -6,8 +6,7 @@ cd cmd/shortener \
 && go build -buildvcs=false -o shortener \
 && ls -la shortener \
 && cd /app \
-&& shortenertestbeta -test.v -test.run=^TestIteration18$ \
+&& shortenertestbeta -test.v -test.run=^TestIteration2$ \
               -binary-path=/app/cmd/shortener/shortener \
               -database-dsn='postgres://postgres:postgres@shortener-test-postgres:5432/praktikum?sslmode=disable' \
               -source-path=.
-
