@@ -13,7 +13,6 @@ var OsExitCheckAnalyzer = &analysis.Analyzer{
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
-
 	if pass.Pkg.Name() == "main" {
 		for _, file := range pass.Files {
 			if file.Name.Name == "main" {

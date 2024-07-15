@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/ShukinDmitriy/shortener/cmd/staticlint/analysis/osexitcheck"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
@@ -9,7 +11,6 @@ import (
 	"golang.org/x/tools/go/analysis/passes/shift"
 	"golang.org/x/tools/go/analysis/passes/structtag"
 	"honnef.co/go/tools/staticcheck"
-	"strings"
 )
 
 func main() {

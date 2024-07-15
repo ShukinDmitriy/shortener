@@ -1,15 +1,16 @@
 package auth_test
 
 import (
-	"github.com/ShukinDmitriy/shortener/internal/auth"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/labstack/echo/v4"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/ShukinDmitriy/shortener/internal/auth"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetAccessTokenCookieName(t *testing.T) {

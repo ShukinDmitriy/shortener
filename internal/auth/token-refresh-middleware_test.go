@@ -1,15 +1,16 @@
 package auth_test
 
 import (
-	"github.com/ShukinDmitriy/shortener/internal/auth"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/labstack/echo/v4"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ShukinDmitriy/shortener/internal/auth"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTokenRefreshMiddleware(t *testing.T) {
@@ -129,7 +130,6 @@ func TestTokenRefreshMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			req := httptest.NewRequest(http.MethodGet, tt.args.targetPath, nil)
 			cookieString := []string{}
 			if tt.args.accessToken != "" {

@@ -1,13 +1,14 @@
 package middleware_test
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/ShukinDmitriy/shortener/internal/middleware"
 	logger2 "github.com/ShukinDmitriy/shortener/mocks/internal_/logger"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/mock"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func TestRequestInfo(t *testing.T) {
