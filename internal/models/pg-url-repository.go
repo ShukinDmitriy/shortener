@@ -38,7 +38,6 @@ func (r *PGURLRepository) Initialize() error {
 	r.pool = pool
 
 	currentDir, _ := os.Getwd()
-	zap.L().Info("current dir", zap.String("currentDir", currentDir))
 	db, err := sql.Open("postgres", environments.FlagDatabaseDSN)
 	if err != nil {
 		zap.L().Error("can't connect to db", zap.String("err", err.Error()))
