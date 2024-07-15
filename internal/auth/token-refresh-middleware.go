@@ -11,12 +11,16 @@ import (
 // TokenRefreshMiddleware for refresh user token
 func TokenRefreshMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		if c.Get("user") == nil {
+		u, ok := c.Get("user").(*jwt.Token)
+		if !ok {
 			return next(c)
 		}
-		u := c.Get("user").(*jwt.Token)
 
-		claims := u.Claims.(*Claims)
+		claims, ok := u.Claims.(*Claims)
+		if !ok {
+			return next(c)
+		}
+
 		user := &User{
 			ID: claims.ID,
 		}

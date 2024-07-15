@@ -44,7 +44,7 @@ func TestCreateTokenWithConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "positive test #",
+			name: "positive test #3",
 			args: args{
 				targetPath:  "/",
 				accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQxNGU1NWIzLWQyNWYtNDYyZC1hN2NjLTY4MTQ4OTM0ODhkOCIsImV4cCI6NTMyMTAyMzIyMn0.hArR7cfGcdRExHwzeA4_S1fMIZwW3tKfERt2jHgIYrY",
