@@ -25,7 +25,6 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 	"go.uber.org/zap"
-	// подключаем пакет pprof
 )
 
 func urlRepositoryFactory() (models.URLRepository, error) {
