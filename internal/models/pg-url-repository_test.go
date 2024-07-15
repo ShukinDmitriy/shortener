@@ -4,22 +4,19 @@ import (
 	"context"
 	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"github.com/ShukinDmitriy/shortener/internal/models"
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
-	"time"
 )
 
 func TestPGURLRepository_Initialize(t *testing.T) {
-	// Будем скипать тест через 10 секунд, т.к. в github нет запуска бд
-	finalTest := make(chan interface{})
-	go func() {
-		select {
-		case <-finalTest:
-			return
-		case <-time.After(10 * time.Second):
-			t.Skip("Skipping testing in CI environment")
-		}
-	}()
+	// Будем скипать тест если нет переменных в test.env
+	godotenv.Load("../../test.env")
+	databaseDSN := os.Getenv("DATABASE_DSN")
+	if databaseDSN == "" {
+		t.Skip("Skipping testing")
+	}
 
 	type args struct {
 		dsn string
@@ -31,7 +28,7 @@ func TestPGURLRepository_Initialize(t *testing.T) {
 		{
 			name: "positive test #1",
 			args: args{
-				dsn: "postgresql://postgres:postgres@192.168.160.11:5432/praktikum?sslmode=disable",
+				dsn: databaseDSN,
 			},
 		},
 	}
@@ -46,21 +43,15 @@ func TestPGURLRepository_Initialize(t *testing.T) {
 			assert.NoError(t, repository.Initialize())
 		})
 	}
-
-	finalTest <- struct{}{}
 }
 
 func TestPGURLRepository_CRUD(t *testing.T) {
-	// Будем скипать тест через 10 секунд, т.к. в github нет запуска бд
-	finalTest := make(chan interface{})
-	go func() {
-		select {
-		case <-finalTest:
-			return
-		case <-time.After(10 * time.Second):
-			t.Skip("Skipping testing in CI environment")
-		}
-	}()
+	// Будем скипать тест если нет переменных в test.env
+	godotenv.Load("../../test.env")
+	databaseDSN := os.Getenv("DATABASE_DSN")
+	if databaseDSN == "" {
+		t.Skip("Skipping testing")
+	}
 
 	type args struct {
 		dsn    string
@@ -74,7 +65,7 @@ func TestPGURLRepository_CRUD(t *testing.T) {
 		{
 			name: "positive test #1",
 			args: args{
-				dsn: "postgresql://postgres:postgres@192.168.160.11:5432/praktikum?sslmode=disable",
+				dsn: databaseDSN,
 				events: []models.Event{
 					{
 						OriginalURL: "https://example.com",
@@ -141,6 +132,4 @@ func TestPGURLRepository_CRUD(t *testing.T) {
 			}
 		})
 	}
-
-	finalTest <- struct{}{}
 }
