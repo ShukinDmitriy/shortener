@@ -36,10 +36,6 @@ func (r *PGURLRepository) Initialize() error {
 	}
 	r.pool = pool
 
-	currentDir, _ := os.Getwd()
-	if strings.HasSuffix(currentDir, "/internal/models") {
-		currentDir = strings.TrimSuffix(currentDir, "/internal/models")
-	}
 	db, err := sql.Open("postgres", environments.FlagDatabaseDSN)
 	if err != nil {
 		zap.L().Error("can't connect to db", zap.String("err", err.Error()))
@@ -55,6 +51,8 @@ func (r *PGURLRepository) Initialize() error {
 		return err
 	}
 
+	currentDir, _ := os.Getwd()
+	currentDir = strings.TrimSuffix(currentDir, "/internal/models")
 	m, err := migrate.NewWithDatabaseInstance(
 		"file:///"+path.Join(currentDir, "db", "migrations"),
 		"postgres", driver)
