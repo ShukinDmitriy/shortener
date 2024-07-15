@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"github.com/ShukinDmitriy/shortener/internal/logger"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
@@ -8,12 +9,12 @@ import (
 )
 
 // ResponseInfo middleware for logging response
-func ResponseInfo(logger *zap.Logger) echo.MiddlewareFunc {
+func ResponseInfo(applicationLogger logger.Logger) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			next(c)
 
-			logger.Info("HTTP response",
+			applicationLogger.Info("HTTP response",
 				zap.String("status", strconv.FormatInt(int64(c.Response().Status), 10)),
 				zap.String("size", strconv.FormatInt(c.Response().Size, 10)),
 			)
