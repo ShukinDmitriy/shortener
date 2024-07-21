@@ -156,8 +156,14 @@ func main() {
 	defer stop()
 	// Start server
 	go func() {
-		if err := e.Start(environments.FlagRunAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			e.Logger.Fatal("shutting down the server")
+		if environments.EnableHTTPS {
+			if err := e.StartTLS(environments.FlagRunAddr, "ssl/localhost.crt", "ssl/device.key"); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				e.Logger.Fatal("shutting down the server")
+			}
+		} else {
+			if err := e.Start(environments.FlagRunAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				e.Logger.Fatal("shutting down the server")
+			}
 		}
 
 		zap.L().Info("Running server", zap.String("address", environments.FlagRunAddr))

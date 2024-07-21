@@ -24,6 +24,9 @@ var FlagFileStoragePath string
 // FlagDatabaseDSN содержит путь до бд
 var FlagDatabaseDSN string
 
+// EnableHTTPS включен ли HTTPS
+var EnableHTTPS bool
+
 // ParseFlags обрабатывает аргументы командной строки
 // и сохраняет их значения в соответствующих переменных
 func ParseFlags() {
@@ -46,6 +49,10 @@ func ParseFlags() {
 	// регистрируем переменную FlagDatabaseDSN
 	// как аргумент -d с пустым значением по умолчанию
 	flag.StringVar(&FlagDatabaseDSN, "d", "", "database DSN")
+
+	// регистрируем переменную EnableHTTPS
+	// как аргумент -s с ложным значением по умолчанию
+	flag.Bool("s", EnableHTTPS, "enable https")
 
 	// парсим переданные серверу аргументы в зарегистрированные переменные
 	flag.Parse()
@@ -87,5 +94,12 @@ func ParseFlags() {
 	// даже если он был передан через аргумент командной строки
 	if envDatabaseDSN, isExist := os.LookupEnv("DATABASE_DSN"); isExist {
 		FlagDatabaseDSN = envDatabaseDSN
+	}
+
+	// для случаев, когда в переменной окружения ENABLE_HTTPS присутствует значение,
+	// переопределим включение HTTPS,
+	// даже если он был передан через аргумент командной строки
+	if envEnableHTTPS, isExist := os.LookupEnv("ENABLE_HTTPS"); isExist {
+		EnableHTTPS = envEnableHTTPS == "true" || envEnableHTTPS == "1"
 	}
 }
