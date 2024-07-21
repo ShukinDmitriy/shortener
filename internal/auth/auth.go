@@ -83,7 +83,7 @@ func (authService *AuthService) GetUserID(c echo.Context) string {
 }
 
 // JWTErrorChecker function for error handling
-func JWTErrorChecker(c echo.Context, err error) error {
+func JWTErrorChecker(_ echo.Context, err error) error {
 	if err != nil {
 		zap.L().Error(
 			"JWTErrorChecker",

@@ -2,7 +2,6 @@ package models
 
 import (
 	"context"
-
 	"github.com/ShukinDmitriy/shortener/internal/environments"
 )
 
@@ -62,7 +61,7 @@ func (r *MemoryURLRepository) Get(shortKey string) (Event, bool) {
 }
 
 // Save batch save events
-func (r *MemoryURLRepository) Save(ctx context.Context, events []*Event) error {
+func (r *MemoryURLRepository) Save(_ context.Context, events []*Event) error {
 	for _, event := range events {
 		shortKey, found := r.GetShortKeyByOriginalURL(event.OriginalURL)
 		if found {
@@ -85,7 +84,7 @@ func (r *MemoryURLRepository) Save(ctx context.Context, events []*Event) error {
 }
 
 // Delete batch delete event
-func (r *MemoryURLRepository) Delete(ctx context.Context, events []DeleteRequestBatch) error {
+func (r *MemoryURLRepository) Delete(_ context.Context, events []DeleteRequestBatch) error {
 	for _, deleteEvent := range events {
 		for _, shortKey := range deleteEvent.ShortKeys {
 			event := r.urls[shortKey]
@@ -123,7 +122,7 @@ func (r *MemoryURLRepository) GetShortKeyByOriginalURL(originalURL string) (stri
 }
 
 // GetEventsByUserID get events by user ID
-func (r *MemoryURLRepository) GetEventsByUserID(ctx context.Context, userID string) []*Event {
+func (r *MemoryURLRepository) GetEventsByUserID(_ context.Context, userID string) []*Event {
 	var events []*Event
 	for _, event := range r.urls {
 		if event.UserID == userID && !event.DeletedFlag {

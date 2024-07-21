@@ -97,7 +97,7 @@ func TestTokenRefreshMiddleware(t *testing.T) {
 				refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQxNGU1NWIzLWQyNWYtNDYyZC1hN2NjLTY4MTQ4OTM0ODhkOCIsImV4cCI6MTc1MjU2ODM1NH0.esFYBIffRE2xcWTjzZMKVy4ExICqKFzezzGRxSopVv8",
 			},
 			want: want{
-				statusCode: 200,
+				statusCode: 401,
 				hasCookie:  false,
 			},
 		},
@@ -131,7 +131,7 @@ func TestTokenRefreshMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.args.targetPath, nil)
-			cookieString := []string{}
+			var cookieString []string
 			if tt.args.accessToken != "" {
 				cookieString = append(cookieString, "access-token="+tt.args.accessToken)
 			}

@@ -162,13 +162,10 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 	}
 
 	// События для сохранения
-	var events []*models.Event
-	// заполняем модель ответа
-	var resp []models.CreateResponseBatch
-
+	events := make([]*models.Event, len(req))
 	userID := us.authService.GetUserID(ctx)
 
-	for _, cr := range req {
+	for i, cr := range req {
 		// проверяем, что пришёл запрос понятного типа
 		if string(cr.OriginalURL) == "" || string(cr.CorrelationID) == "" {
 			err := "empty original_url or correlation_id"
@@ -184,12 +181,12 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 		// Generate a unique shortened key for the original URL
 		shortKey := models.GenerateShortKey()
 
-		events = append(events, &models.Event{
+		events[i] = &models.Event{
 			ShortKey:      shortKey,
 			OriginalURL:   cr.OriginalURL,
 			CorrelationID: cr.CorrelationID,
 			UserID:        userID,
-		})
+		}
 	}
 
 	status := http.StatusCreated
@@ -204,11 +201,13 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 		}
 	}
 
-	for _, event := range events {
-		resp = append(resp, models.CreateResponseBatch{
+	// заполняем модель ответа
+	resp := make([]models.CreateResponseBatch, len(events))
+	for i, event := range events {
+		resp[i] = models.CreateResponseBatch{
 			CorrelationID: event.CorrelationID,
 			ShortURL:      models.PrepareFullURL(ctx, event.ShortKey),
-		})
+		}
 	}
 
 	return ctx.JSON(status, resp)
@@ -264,13 +263,13 @@ func (us *URLShortener) HandleUserURLGet(ctx echo.Context) error {
 	events := us.URLRepository.GetEventsByUserID(ctx.Request().Context(), userID)
 
 	// заполняем модель ответа
-	var resp []models.GetUserURLsResponse
+	resp := make([]models.GetUserURLsResponse, len(events))
 
-	for _, event := range events {
-		resp = append(resp, models.GetUserURLsResponse{
+	for i, event := range events {
+		resp[i] = models.GetUserURLsResponse{
 			ShortURL:    models.PrepareFullURL(ctx, event.ShortKey),
 			OriginalURL: event.OriginalURL,
-		})
+		}
 	}
 
 	return ctx.JSON(http.StatusOK, resp)
@@ -298,7 +297,7 @@ func (us *URLShortener) HandleUserURLDelete(ctx echo.Context) error {
 }
 
 // Shutdown function
-func (us *URLShortener) Shutdown(ctx context.Context) chan struct{} {
+func (us *URLShortener) Shutdown() chan struct{} {
 	res := make(chan struct{})
 
 	go func() {

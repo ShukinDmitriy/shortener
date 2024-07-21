@@ -682,7 +682,7 @@ func TestURLShortener_Shutdown(t *testing.T) {
 				assert.NoError(t, shortener.HandleUserURLDelete(c))
 			}
 			timeout := time.After(time.Second * 5)
-			sChan := shortener.Shutdown(context.TODO())
+			sChan := shortener.Shutdown()
 
 			select {
 			case <-timeout:
