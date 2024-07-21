@@ -31,4 +31,5 @@ func main() {
 	multichecker.Main(
 		mychecks...,
 	)
+
 }

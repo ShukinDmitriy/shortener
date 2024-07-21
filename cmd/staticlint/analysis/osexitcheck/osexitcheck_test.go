@@ -15,4 +15,5 @@ func TestOsExitCheck(t *testing.T) {
 	testData := analysistest.TestData()
 	analyzer := osexitcheck.OsExitCheckAnalyzer
 	analysistest.Run(t, testData, analyzer, "./...")
+
 }
