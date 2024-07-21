@@ -97,7 +97,7 @@ func TestTokenRefreshMiddleware(t *testing.T) {
 				refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQxNGU1NWIzLWQyNWYtNDYyZC1hN2NjLTY4MTQ4OTM0ODhkOCIsImV4cCI6MTc1MjU2ODM1NH0.esFYBIffRE2xcWTjzZMKVy4ExICqKFzezzGRxSopVv8",
 			},
 			want: want{
-				statusCode: 200,
+				statusCode: 401,
 				hasCookie:  false,
 			},
 		},
