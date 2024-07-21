@@ -167,7 +167,7 @@ func main() {
 	<-ctx.Done()
 
 	// Запускаем остановку
-	shutdownChan := shortener.Shutdown(context.Background())
+	shutdownChan := shortener.Shutdown()
 	<-shutdownChan
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

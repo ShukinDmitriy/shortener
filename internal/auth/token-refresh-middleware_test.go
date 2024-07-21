@@ -131,7 +131,7 @@ func TestTokenRefreshMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.args.targetPath, nil)
-			cookieString := []string{}
+			var cookieString []string
 			if tt.args.accessToken != "" {
 				cookieString = append(cookieString, "access-token="+tt.args.accessToken)
 			}

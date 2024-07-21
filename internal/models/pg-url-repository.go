@@ -127,7 +127,7 @@ VALUES ($1, $2, $3, $4);`,
 
 // Delete batch delete event
 func (r *PGURLRepository) Delete(ctx context.Context, events []DeleteRequestBatch) error {
-	errs := []error{}
+	var errs []error
 	var shortKeys []string
 
 	for _, deletedEvent := range events {

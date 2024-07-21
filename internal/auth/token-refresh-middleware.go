@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -32,7 +33,7 @@ func TokenRefreshMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 					return []byte(GetRefreshJWTSecret()), nil
 				})
 				if err != nil {
-					if err == jwt.ErrSignatureInvalid {
+					if errors.Is(err, jwt.ErrSignatureInvalid) {
 						c.Response().Writer.WriteHeader(http.StatusUnauthorized)
 					}
 				}
