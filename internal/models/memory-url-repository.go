@@ -5,12 +5,14 @@ import (
 	"github.com/ShukinDmitriy/shortener/internal/environments"
 )
 
+// MemoryURLRepository repository for working with a memory
 type MemoryURLRepository struct {
 	DBConsumer *Consumer
 	DBProducer *Producer
 	urls       map[string]Event
 }
 
+// Initialize repository
 func (r *MemoryURLRepository) Initialize() error {
 	r.urls = make(map[string]Event)
 
@@ -47,17 +49,19 @@ func (r *MemoryURLRepository) Initialize() error {
 	}
 }
 
+// Get event by short key
 func (r *MemoryURLRepository) Get(shortKey string) (Event, bool) {
 	// Поиск в памяти
 	var event Event
-	var found = false
+	found := false
 
 	event, found = r.urls[shortKey]
 
 	return event, found
 }
 
-func (r *MemoryURLRepository) Save(ctx context.Context, events []*Event) error {
+// Save batch save events
+func (r *MemoryURLRepository) Save(_ context.Context, events []*Event) error {
 	for _, event := range events {
 		shortKey, found := r.GetShortKeyByOriginalURL(event.OriginalURL)
 		if found {
@@ -79,7 +83,8 @@ func (r *MemoryURLRepository) Save(ctx context.Context, events []*Event) error {
 	return nil
 }
 
-func (r *MemoryURLRepository) Delete(ctx context.Context, events []DeleteRequestBatch) error {
+// Delete batch delete event
+func (r *MemoryURLRepository) Delete(_ context.Context, events []DeleteRequestBatch) error {
 	for _, deleteEvent := range events {
 		for _, shortKey := range deleteEvent.ShortKeys {
 			event := r.urls[shortKey]
@@ -105,6 +110,7 @@ func (r *MemoryURLRepository) Delete(ctx context.Context, events []DeleteRequest
 	return nil
 }
 
+// GetShortKeyByOriginalURL get short link from full link
 func (r *MemoryURLRepository) GetShortKeyByOriginalURL(originalURL string) (string, bool) {
 	for _, event := range r.urls {
 		if event.OriginalURL == originalURL && !event.DeletedFlag {
@@ -115,7 +121,8 @@ func (r *MemoryURLRepository) GetShortKeyByOriginalURL(originalURL string) (stri
 	return "", false
 }
 
-func (r *MemoryURLRepository) GetEventsByUserID(ctx context.Context, userID string) []*Event {
+// GetEventsByUserID get events by user ID
+func (r *MemoryURLRepository) GetEventsByUserID(_ context.Context, userID string) []*Event {
 	var events []*Event
 	for _, event := range r.urls {
 		if event.UserID == userID && !event.DeletedFlag {

@@ -1,12 +1,14 @@
 package models
 
 import (
-	"github.com/ShukinDmitriy/shortener/internal/environments"
-	"github.com/labstack/echo/v4"
 	"math/rand"
 	"time"
+
+	"github.com/ShukinDmitriy/shortener/internal/environments"
+	"github.com/labstack/echo/v4"
 )
 
+// Event short link generation event structure
 type Event struct {
 	ShortKey      string `json:"short_key,omitempty"`
 	OriginalURL   string `json:"original_url,omitempty"`
@@ -15,6 +17,7 @@ type Event struct {
 	DeletedFlag   bool   `json:"is_deleted,omitempty"`
 }
 
+// GenerateShortKey generate random string
 func GenerateShortKey() string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	const keyLength = 6
@@ -28,6 +31,7 @@ func GenerateShortKey() string {
 	return string(shortKey)
 }
 
+// PrepareFullURL prepare full link
 func PrepareFullURL(ctx echo.Context, shortKey string) string {
 	var host string
 

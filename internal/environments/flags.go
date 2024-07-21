@@ -1,23 +1,27 @@
+// Package environments configuration
 package environments
 
 import (
 	"flag"
 	"os"
+
+	"github.com/joho/godotenv"
+	"github.com/labstack/gommon/log"
 )
 
-// неэкспортированная переменная FlagRunAddr содержит адрес и порт для запуска сервера
+// FlagRunAddr содержит адрес и порт для запуска сервера
 var FlagRunAddr string
 
-// неэкспортированная переменная FlagBaseAddr содержит базовый адрес результирующего сокращённого URL
+// FlagBaseAddr содержит базовый адрес результирующего сокращённого URL
 var FlagBaseAddr string
 
-// неэкспортированная переменная FlagLogLevel содержит уровень логгирования
+// FlagLogLevel содержит уровень логгирования
 var FlagLogLevel string
 
 // FlagFileStoragePath содержит путь до файла хранения
 var FlagFileStoragePath string
 
-// неэкспортированная переменная FlagDatabaseDSN содержит путь до бд
+// FlagDatabaseDSN содержит путь до бд
 var FlagDatabaseDSN string
 
 // ParseFlags обрабатывает аргументы командной строки
@@ -45,6 +49,10 @@ func ParseFlags() {
 
 	// парсим переданные серверу аргументы в зарегистрированные переменные
 	flag.Parse()
+
+	if err := godotenv.Load(); err != nil {
+		log.Print("No .env file found")
+	}
 
 	// для случаев, когда в переменной окружения SERVER_ADDRESS присутствует непустое значение,
 	// переопределим адрес запуска сервера,

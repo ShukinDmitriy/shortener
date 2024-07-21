@@ -1,11 +1,13 @@
+// Package auth service
 package auth
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
-	"net/http"
-	"time"
 )
 
 const (
@@ -15,27 +17,33 @@ const (
 	jwtRefreshSecretKey    = "some-refresh-secret-key"
 )
 
+// GetAccessTokenCookieName get access token name
 func GetAccessTokenCookieName() string {
 	return accessTokenCookieName
 }
 
+// GetJWTSecret get secret
 func GetJWTSecret() string {
 	return jwtSecretKey
 }
 
+// GetSigningMethod get signing method name
 func GetSigningMethod() *jwt.SigningMethodHMAC {
 	return jwt.SigningMethodHS256
 }
 
+// Claims struct
 type Claims struct {
 	ID string `json:"id"`
 	jwt.RegisteredClaims
 }
 
+// GetRefreshJWTSecret get refresh token name
 func GetRefreshJWTSecret() string {
 	return jwtRefreshSecretKey
 }
 
+// GenerateTokensAndSetCookies generate and set cookie
 func GenerateTokensAndSetCookies(c echo.Context, user *User) error {
 	accessToken, accessTokenString, exp, err := generateAccessToken(user)
 	if err != nil {
@@ -54,7 +62,16 @@ func GenerateTokensAndSetCookies(c echo.Context, user *User) error {
 	return nil
 }
 
-func GetUserID(c echo.Context) string {
+// AuthService service for auth
+type AuthService struct{}
+
+// NewAuthService constructor for auth service
+func NewAuthService() *AuthService {
+	return &AuthService{}
+}
+
+// GetUserID get user
+func (authService *AuthService) GetUserID(c echo.Context) string {
 	if c.Get("user") == nil {
 		return ""
 	}
@@ -65,7 +82,8 @@ func GetUserID(c echo.Context) string {
 	return claims.ID
 }
 
-func JWTErrorChecker(c echo.Context, err error) error {
+// JWTErrorChecker function for error handling
+func JWTErrorChecker(_ echo.Context, err error) error {
 	if err != nil {
 		zap.L().Error(
 			"JWTErrorChecker",

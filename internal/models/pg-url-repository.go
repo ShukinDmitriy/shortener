@@ -4,6 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"os"
+	"path"
+	"strings"
+
 	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -12,16 +16,17 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
-	"os"
-	"path"
 )
 
+// ErrURLExist default error
 var ErrURLExist = errors.New("URL exist")
 
+// PGURLRepository repository for working with a database
 type PGURLRepository struct {
 	pool *pgxpool.Pool
 }
 
+// Initialize repository
 func (r *PGURLRepository) Initialize() error {
 	cont := context.Background()
 	var pool *pgxpool.Pool
@@ -33,8 +38,6 @@ func (r *PGURLRepository) Initialize() error {
 	}
 	r.pool = pool
 
-	currentDir, _ := os.Getwd()
-	zap.L().Info("current dir", zap.String("currentDir", currentDir))
 	db, err := sql.Open("postgres", environments.FlagDatabaseDSN)
 	if err != nil {
 		zap.L().Error("can't connect to db", zap.String("err", err.Error()))
@@ -50,6 +53,8 @@ func (r *PGURLRepository) Initialize() error {
 		return err
 	}
 
+	currentDir, _ := os.Getwd()
+	currentDir = strings.TrimSuffix(currentDir, "/internal/models")
 	m, err := migrate.NewWithDatabaseInstance(
 		"file:///"+path.Join(currentDir, "db", "migrations"),
 		"postgres", driver)
@@ -68,6 +73,7 @@ func (r *PGURLRepository) Initialize() error {
 	return nil
 }
 
+// Get event by short key
 func (r *PGURLRepository) Get(shortKey string) (Event, bool) {
 	var originalURL string
 	var isDeleted bool
@@ -90,6 +96,7 @@ func (r *PGURLRepository) Get(shortKey string) (Event, bool) {
 	}, err == nil && originalURL != ""
 }
 
+// Save batch save events
 func (r *PGURLRepository) Save(ctx context.Context, events []*Event) error {
 	var errs []error
 
@@ -100,7 +107,6 @@ func (r *PGURLRepository) Save(ctx context.Context, events []*Event) error {
 VALUES ($1, $2, $3, $4);`,
 			event.ShortKey, event.OriginalURL, event.CorrelationID, event.UserID,
 		)
-
 		if err != nil {
 			zap.L().Error(err.Error())
 
@@ -119,8 +125,9 @@ VALUES ($1, $2, $3, $4);`,
 	return errors.Join(errs...)
 }
 
+// Delete batch delete event
 func (r *PGURLRepository) Delete(ctx context.Context, events []DeleteRequestBatch) error {
-	errs := []error{}
+	var errs []error
 	var shortKeys []string
 
 	for _, deletedEvent := range events {
@@ -132,7 +139,6 @@ func (r *PGURLRepository) Delete(ctx context.Context, events []DeleteRequestBatc
 			deletedEvent.UserID,
 			shortKeys,
 		)
-
 		if err != nil {
 			zap.L().Error(err.Error())
 			errs = append(errs, err)
@@ -142,6 +148,7 @@ func (r *PGURLRepository) Delete(ctx context.Context, events []DeleteRequestBatc
 	return errors.Join(errs...)
 }
 
+// GetShortKeyByOriginalURL get short link from full link
 func (r *PGURLRepository) GetShortKeyByOriginalURL(originalURL string) (string, bool) {
 	var shortKey string
 
@@ -159,6 +166,7 @@ func (r *PGURLRepository) GetShortKeyByOriginalURL(originalURL string) (string, 
 	return shortKey, err == nil && shortKey != ""
 }
 
+// GetEventsByUserID get events by user ID
 func (r *PGURLRepository) GetEventsByUserID(ctx context.Context, userID string) []*Event {
 	var events []*Event
 
@@ -167,7 +175,6 @@ func (r *PGURLRepository) GetEventsByUserID(ctx context.Context, userID string) 
 		`SELECT short_key, original_url from public.url WHERE user_id = $1 and is_deleted is false;`,
 		userID,
 	)
-
 	if err != nil {
 		zap.L().Error(err.Error())
 		return events

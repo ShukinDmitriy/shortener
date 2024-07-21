@@ -1,9 +1,18 @@
+// The package starts the application Shortener
 package main
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"strings"
+	"time"
+
+	"github.com/ShukinDmitriy/shortener/internal/app"
 	"github.com/ShukinDmitriy/shortener/internal/auth"
 	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"github.com/ShukinDmitriy/shortener/internal/logger"
@@ -16,11 +25,6 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 	"go.uber.org/zap"
-	"net/http"
-	"os"
-	"os/signal"
-	"strings"
-	"time"
 )
 
 func urlRepositoryFactory() (models.URLRepository, error) {
@@ -41,14 +45,17 @@ func urlRepositoryFactory() (models.URLRepository, error) {
 }
 
 func main() {
+	// Профилирование
+	runProf()
+
 	environments.ParseFlags()
 
 	if err := logger.Initialize(environments.FlagLogLevel); err != nil {
+		fmt.Println(err)
 		return
 	}
 
 	repository, err := urlRepositoryFactory()
-
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -62,7 +69,9 @@ func main() {
 		defer conn.Close(context.Background())
 	}
 
-	var shortener = newURLShortener(repository, conn)
+	authService := auth.NewAuthService()
+
+	shortener := app.NewURLShortener(repository, conn, authService)
 
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)
@@ -158,7 +167,7 @@ func main() {
 	<-ctx.Done()
 
 	// Запускаем остановку
-	shutdownChan := shortener.Shutdown(context.Background())
+	shutdownChan := shortener.Shutdown()
 	<-shutdownChan
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

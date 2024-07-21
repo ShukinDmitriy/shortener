@@ -1,3 +1,4 @@
+// Package logger log for application
 package logger
 
 import (

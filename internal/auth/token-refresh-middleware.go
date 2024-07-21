@@ -1,20 +1,27 @@
 package auth
 
 import (
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/labstack/echo/v4"
+	"errors"
 	"net/http"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/labstack/echo/v4"
 )
 
+// TokenRefreshMiddleware for refresh user token
 func TokenRefreshMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		if c.Get("user") == nil {
+		u, ok := c.Get("user").(*jwt.Token)
+		if !ok {
 			return next(c)
 		}
-		u := c.Get("user").(*jwt.Token)
 
-		claims := u.Claims.(*Claims)
+		claims, ok := u.Claims.(*Claims)
+		if !ok {
+			return next(c)
+		}
+
 		user := &User{
 			ID: claims.ID,
 		}
@@ -26,7 +33,7 @@ func TokenRefreshMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 					return []byte(GetRefreshJWTSecret()), nil
 				})
 				if err != nil {
-					if err == jwt.ErrSignatureInvalid {
+					if errors.Is(err, jwt.ErrSignatureInvalid) {
 						c.Response().Writer.WriteHeader(http.StatusUnauthorized)
 					}
 				}

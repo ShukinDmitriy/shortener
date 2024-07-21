@@ -4,6 +4,7 @@ import (
 	"context"
 )
 
+// URLRepository repository interface for working with URL
 type URLRepository interface {
 	Initialize() error
 

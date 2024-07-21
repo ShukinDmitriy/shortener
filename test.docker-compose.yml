@@ -2,8 +2,8 @@ version: "3.8"
 
 services:
 # БД postgres
-  postgres:
-    container_name: postgres
+  shortener-test-postgres:
+    container_name: shortener-test-postgres
     image: postgres
     restart: always
     environment:
@@ -16,8 +16,8 @@ services:
         ipv4_address: 192.168.160.11
 
 # go
-  golang:
-    container_name: golang
+  shortener-test-golang:
+    container_name: shortener-test-golang
     build:
       context: go
     volumes:
@@ -25,7 +25,7 @@ services:
       - ./autotests/shortenertestbeta:/usr/local/bin/shortenertestbeta
       - ./autotests/random:/usr/local/bin/random
     depends_on:
-      - postgres
+      - shortener-test-postgres
     networks:
       test:
         ipv4_address: 192.168.160.10

@@ -1,0 +1,5 @@
+#!/bin/sh
+
+${GOPATH}/bin/gofumpt -l -w .
+
+git add -u
