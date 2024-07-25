@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -84,8 +85,12 @@ func main() {
 	}
 
 	authService := auth.NewAuthService()
-
-	shortener := app.NewURLShortener(repository, conn, authService)
+	_, subnet, err := net.ParseCIDR(configuration.TrustedSubnet)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	shortener := app.NewURLShortener(repository, conn, authService, subnet)
 
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)
@@ -98,6 +103,7 @@ func main() {
 	e.GET("/ping", shortener.HandlePing)
 	e.GET("/api/user/urls", shortener.HandleUserURLGet)
 	e.DELETE("/api/user/urls", shortener.HandleUserURLDelete)
+	e.GET("/api/internal/stats", shortener.HandleGetStats)
 
 	//-------------------
 	// middleware

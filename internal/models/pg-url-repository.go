@@ -202,3 +202,15 @@ func (r *PGURLRepository) GetEventsByUserID(ctx context.Context, userID string) 
 
 	return events
 }
+
+// GetStats get repository's stats
+func (r *PGURLRepository) GetStats(ctx context.Context) (countUser int, countURL int, err error) {
+	row := r.pool.QueryRow(
+		ctx,
+		`SELECT COUNT(DISTINCT user_id), COUNT (DISTINCT original_url) FROM url;`,
+	)
+
+	err = row.Scan(&countUser, &countURL)
+
+	return countUser, countURL, err
+}

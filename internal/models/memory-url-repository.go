@@ -133,3 +133,17 @@ func (r *MemoryURLRepository) GetEventsByUserID(_ context.Context, userID string
 
 	return events
 }
+
+// GetStats get repository's stats
+func (r *MemoryURLRepository) GetStats(_ context.Context) (countUser int, countURL int, err error) {
+	users := make(map[string]interface{})
+
+	for _, event := range r.urls {
+		if _, ok := users[event.UserID]; !ok {
+			countUser++
+		}
+	}
+	countURL = len(r.urls)
+
+	return countUser, countURL, err
+}
