@@ -3,6 +3,7 @@ package app_test
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -34,7 +35,8 @@ func Example() {
 	}
 
 	repository := &models.MemoryURLRepository{}
-	err := repository.Initialize()
+	configuration := environments.Configuration{}
+	err := repository.Initialize(configuration)
 	if err != nil {
 		panic(err)
 	}

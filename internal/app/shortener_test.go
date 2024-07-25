@@ -3,6 +3,7 @@ package app_test
 import (
 	"context"
 	"encoding/json"
+	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -52,7 +53,8 @@ func TestURLShortener_HandleShorten(t *testing.T) {
 	}
 
 	repository := &models.MemoryURLRepository{}
-	err := repository.Initialize()
+	configuration := environments.Configuration{}
+	err := repository.Initialize(configuration)
 	require.NoError(t, err)
 	authService := new(auth.AuthServiceInterface)
 
@@ -144,7 +146,8 @@ func TestURLShortener_HandleCreateShorten(t *testing.T) {
 	}
 
 	repository := &models.MemoryURLRepository{}
-	err := repository.Initialize()
+	configuration := environments.Configuration{}
+	err := repository.Initialize(configuration)
 	require.NoError(t, err)
 	authService := new(auth.AuthServiceInterface)
 
@@ -230,7 +233,8 @@ func TestURLShortener_HandleCreateShortenBatch(t *testing.T) {
 	}
 
 	repository := &models.MemoryURLRepository{}
-	err := repository.Initialize()
+	configuration := environments.Configuration{}
+	err := repository.Initialize(configuration)
 	require.NoError(t, err)
 	authService := new(auth.AuthServiceInterface)
 
@@ -318,7 +322,8 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 	}
 
 	repository := &models.MemoryURLRepository{}
-	err := repository.Initialize()
+	configuration := environments.Configuration{}
+	err := repository.Initialize(configuration)
 	require.NoError(t, err)
 	authService := new(auth.AuthServiceInterface)
 

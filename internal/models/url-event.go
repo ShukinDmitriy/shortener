@@ -35,8 +35,8 @@ func GenerateShortKey() string {
 func PrepareFullURL(ctx echo.Context, shortKey string) string {
 	var host string
 
-	if environments.FlagBaseAddr != "" {
-		host = environments.FlagBaseAddr
+	if environments.BaseAddr != "" {
+		host = environments.BaseAddr
 	} else {
 		host = "http://" + ctx.Request().Host
 	}

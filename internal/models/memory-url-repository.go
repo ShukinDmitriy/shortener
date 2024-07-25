@@ -13,10 +13,10 @@ type MemoryURLRepository struct {
 }
 
 // Initialize repository
-func (r *MemoryURLRepository) Initialize() error {
+func (r *MemoryURLRepository) Initialize(configuration environments.Configuration) error {
 	r.urls = make(map[string]Event)
 
-	filename := environments.FlagFileStoragePath
+	filename := configuration.FileStoragePath
 	if filename == "" {
 		return nil
 	}

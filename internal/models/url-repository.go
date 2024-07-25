@@ -2,11 +2,12 @@ package models
 
 import (
 	"context"
+	"github.com/ShukinDmitriy/shortener/internal/environments"
 )
 
 // URLRepository repository interface for working with URL
 type URLRepository interface {
-	Initialize() error
+	Initialize(configuration environments.Configuration) error
 
 	Get(shortKey string) (Event, bool)
 
