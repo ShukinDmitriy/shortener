@@ -206,7 +206,7 @@ func ParseFlags() Configuration {
 	if configuration.DatabaseDSN = flagDatabaseDSN; configuration.DatabaseDSN == "" {
 		configuration.DatabaseDSN = fileConfig.DatabaseDSN
 	}
-	if configuration.EnableHTTPS = enableHTTPS; configuration.EnableHTTPS == false {
+	if configuration.EnableHTTPS = enableHTTPS; !configuration.EnableHTTPS {
 		configuration.EnableHTTPS = fileConfig.EnableHTTPS
 	}
 
