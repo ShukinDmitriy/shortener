@@ -1,9 +1,10 @@
 package logger_test
 
 import (
+	"testing"
+
 	"github.com/ShukinDmitriy/shortener/internal/logger"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 // TestInitializeSuccess проверяет успешную инициализацию логгера.

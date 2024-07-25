@@ -27,6 +27,15 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	// buildVersion build version
+	buildVersion = "N/A"
+	// buildDate build date
+	buildDate = "N/A"
+	// buildCommit build commit hash
+	buildCommit = "N/A"
+)
+
 func urlRepositoryFactory(configuration environments.Configuration) (models.URLRepository, error) {
 	var repository models.URLRepository
 
@@ -45,6 +54,10 @@ func urlRepositoryFactory(configuration environments.Configuration) (models.URLR
 }
 
 func main() {
+	log.Printf("Build version: %v\n", buildVersion)
+	log.Printf("Build date: %v\n", buildDate)
+	log.Printf("Build commit: %v\n", buildCommit)
+
 	// Профилирование
 	runProf()
 

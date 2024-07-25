@@ -1,10 +1,11 @@
 package environments_test
 
 import (
-	"encoding/json"
-	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"os"
+	"encoding/json"
 	"testing"
+
+	"github.com/ShukinDmitriy/shortener/internal/environments"
 
 	"github.com/stretchr/testify/assert"
 )

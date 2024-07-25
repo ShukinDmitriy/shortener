@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/ShukinDmitriy/shortener/internal/environments"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/ShukinDmitriy/shortener/internal/environments"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/ShukinDmitriy/shortener/internal/models"
 )
@@ -110,7 +111,7 @@ func TestMemoryURLRepository_CRUD(t *testing.T) {
 					content += fmt.Sprintln(string(sEvent))
 				}
 
-				os.WriteFile(tt.args.filename, []byte(content), 0644)
+				os.WriteFile(tt.args.filename, []byte(content), 0o644)
 			}
 
 			repository := &models.MemoryURLRepository{}
