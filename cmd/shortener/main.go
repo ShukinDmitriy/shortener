@@ -88,7 +88,6 @@ func main() {
 	_, subnet, err := net.ParseCIDR(configuration.TrustedSubnet)
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
 	shortener := app.NewURLShortener(repository, conn, authService, subnet)
 
