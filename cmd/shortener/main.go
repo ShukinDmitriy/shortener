@@ -152,8 +152,6 @@ func main() {
 	}))
 	e.Use(auth.TokenRefreshMiddleware)
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer stop()
 	// Start server
 	go func() {
 		if configuration.EnableHTTPS {
@@ -170,6 +168,8 @@ func main() {
 	}()
 
 	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 10 seconds.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 	<-ctx.Done()
 
 	// Запускаем остановку
