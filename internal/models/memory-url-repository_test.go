@@ -2,10 +2,13 @@ package models_test
 
 import (
 	"context"
-	"github.com/ShukinDmitriy/shortener/internal/environments"
-	"github.com/stretchr/testify/assert"
+	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
+
+	"github.com/ShukinDmitriy/shortener/internal/environments"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/ShukinDmitriy/shortener/internal/models"
 )
@@ -55,6 +58,7 @@ func TestMemoryURLRepository_Initialize(t *testing.T) {
 func TestMemoryURLRepository_CRUD(t *testing.T) {
 	type args struct {
 		filename string
+		length   int
 		events   []models.Event
 	}
 	tests := []struct {
@@ -65,6 +69,7 @@ func TestMemoryURLRepository_CRUD(t *testing.T) {
 			name: "positive test #1",
 			args: args{
 				filename: "./events.json",
+				length:   2,
 				events: []models.Event{
 					{
 						OriginalURL: "https://example.com",
@@ -91,10 +96,23 @@ func TestMemoryURLRepository_CRUD(t *testing.T) {
 			if tt.args.filename != "" {
 				environments.FlagFileStoragePath = tt.args.filename
 				defer os.Remove(tt.args.filename)
+
+				content := ""
+				for i := 0; i < tt.args.length; i++ {
+					sEvent, _ := json.Marshal(models.Event{
+						OriginalURL: "https://test.data",
+						ShortKey:    fmt.Sprintf("test%d", i),
+						UserID:      "0",
+					})
+					content += fmt.Sprintln(string(sEvent))
+				}
+
+				os.WriteFile(tt.args.filename, []byte(content), 0o644)
 			}
 
 			repository := &models.MemoryURLRepository{}
 			assert.NoError(t, repository.Initialize())
+			assert.Equal(t, tt.args.length, len(repository.GetEventsByUserID(context.TODO(), "0")))
 
 			for _, event := range tt.args.events {
 				assert.NoError(t, repository.Save(context.TODO(), []*models.Event{

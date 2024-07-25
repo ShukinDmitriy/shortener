@@ -636,21 +636,51 @@ func TestURLShortener_Shutdown(t *testing.T) {
 
 	mockConn.ExpectPing().Times(1)
 
+	type args struct {
+		userID string
+		events []string
+	}
 	tests := []struct {
 		name string
+		args args
 	}{
 		{
 			name: "positive test #1",
+		},
+		{
+			name: "positive test #2",
+			args: args{
+				userID: "123",
+				events: []string{"SYqDJ3", "4SwGPJ", "z3e7av"},
+			},
 		},
 	}
 
 	repository := new(models2.URLRepository)
 	authService := new(auth.AuthServiceInterface)
 
-	shortener := app.NewURLShortener(repository, mockConn, authService)
-
 	for _, test := range tests {
+		shortener := app.NewURLShortener(repository, mockConn, authService)
+
 		t.Run(test.name, func(t *testing.T) {
+			if len(test.args.events) > 0 {
+				e := echo.New()
+				stringBody, _ := json.Marshal(test.args.events)
+				req := httptest.NewRequest(http.MethodDelete, "/api/user/urls", strings.NewReader(string(stringBody)))
+
+				rec := httptest.NewRecorder()
+				c := e.NewContext(req, rec)
+
+				authService.EXPECT().GetUserID(c).Return(test.args.userID)
+				repository.EXPECT().Delete(context.TODO(), []models.DeleteRequestBatch{
+					{
+						UserID:    test.args.userID,
+						ShortKeys: test.args.events,
+					},
+				}).Return(nil)
+
+				assert.NoError(t, shortener.HandleUserURLDelete(c))
+			}
 			timeout := time.After(time.Second * 5)
 			sChan := shortener.Shutdown()
 

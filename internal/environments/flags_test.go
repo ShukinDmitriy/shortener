@@ -1,9 +1,10 @@
 package environments_test
 
 import (
-	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"os"
 	"testing"
+
+	"github.com/ShukinDmitriy/shortener/internal/environments"
 
 	"github.com/stretchr/testify/assert"
 )

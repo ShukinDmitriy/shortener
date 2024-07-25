@@ -2,12 +2,13 @@ package models_test
 
 import (
 	"context"
+	"os"
+	"testing"
+
 	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"github.com/ShukinDmitriy/shortener/internal/models"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"testing"
 )
 
 func TestPGURLRepository_Initialize(t *testing.T) {
