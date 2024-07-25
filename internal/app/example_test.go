@@ -3,10 +3,11 @@ package app_test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+
+	"github.com/ShukinDmitriy/shortener/internal/environments"
 
 	"github.com/ShukinDmitriy/shortener/internal/app"
 	"github.com/ShukinDmitriy/shortener/internal/auth"

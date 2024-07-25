@@ -3,13 +3,14 @@ package app_test
 import (
 	"context"
 	"encoding/json"
-	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ShukinDmitriy/shortener/internal/environments"
 
 	"github.com/ShukinDmitriy/shortener/internal/app"
 	"github.com/ShukinDmitriy/shortener/internal/models"

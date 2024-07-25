@@ -1,8 +1,8 @@
 package environments_test
 
 import (
-	"os"
 	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/ShukinDmitriy/shortener/internal/environments"
@@ -29,7 +29,7 @@ func TestParseFlagsFromJSON(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = os.WriteFile(filename, data, 0666)
+	err = os.WriteFile(filename, data, 0o666)
 	if err != nil {
 		t.Error(err)
 	}
