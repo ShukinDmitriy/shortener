@@ -3,7 +3,9 @@ package app_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -59,7 +61,7 @@ func TestURLShortener_HandleShorten(t *testing.T) {
 	require.NoError(t, err)
 	authService := new(auth.AuthServiceInterface)
 
-	shortener := app.NewURLShortener(repository, nil, authService)
+	shortener := app.NewURLShortener(repository, nil, authService, nil)
 
 	e := echo.New()
 
@@ -76,7 +78,7 @@ func TestURLShortener_HandleShorten(t *testing.T) {
 			if err != nil {
 				res, ok := err.(*echo.HTTPError)
 
-				require.NotNil(t, ok)
+				require.True(t, ok)
 				assert.Equal(t, test.want.code, res.Code)
 
 				resBody := res.Message
@@ -152,7 +154,7 @@ func TestURLShortener_HandleCreateShorten(t *testing.T) {
 	require.NoError(t, err)
 	authService := new(auth.AuthServiceInterface)
 
-	shortener := app.NewURLShortener(repository, nil, authService)
+	shortener := app.NewURLShortener(repository, nil, authService, nil)
 
 	e := echo.New()
 
@@ -171,7 +173,7 @@ func TestURLShortener_HandleCreateShorten(t *testing.T) {
 			if err != nil {
 				res, ok := err.(*echo.HTTPError)
 
-				require.NotNil(t, ok)
+				require.True(t, ok)
 				assert.Equal(t, test.want.code, res.Code)
 
 				resBody := res.Message
@@ -239,7 +241,7 @@ func TestURLShortener_HandleCreateShortenBatch(t *testing.T) {
 	require.NoError(t, err)
 	authService := new(auth.AuthServiceInterface)
 
-	shortener := app.NewURLShortener(repository, nil, authService)
+	shortener := app.NewURLShortener(repository, nil, authService, nil)
 
 	e := echo.New()
 
@@ -259,7 +261,7 @@ func TestURLShortener_HandleCreateShortenBatch(t *testing.T) {
 			if err != nil {
 				res, ok := err.(*echo.HTTPError)
 
-				require.NotNil(t, ok)
+				require.True(t, ok)
 				assert.Equal(t, test.want.code, res.Code)
 
 				resBody := res.Message
@@ -328,7 +330,7 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 	require.NoError(t, err)
 	authService := new(auth.AuthServiceInterface)
 
-	shortener := app.NewURLShortener(repository, nil, authService)
+	shortener := app.NewURLShortener(repository, nil, authService, nil)
 
 	e := echo.New()
 
@@ -376,7 +378,7 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 			if err != nil {
 				res, ok := err.(*echo.HTTPError)
 
-				require.NotNil(t, ok)
+				require.True(t, ok)
 				assert.Equal(t, test.want.code, res.Code)
 
 				resBody := res.Message
@@ -429,7 +431,7 @@ func TestURLShortener_HandlePing(t *testing.T) {
 	repository := new(models2.URLRepository)
 	authService := new(auth.AuthServiceInterface)
 
-	shortener := app.NewURLShortener(repository, mockConn, authService)
+	shortener := app.NewURLShortener(repository, mockConn, authService, nil)
 
 	e := echo.New()
 
@@ -446,7 +448,7 @@ func TestURLShortener_HandlePing(t *testing.T) {
 			if err != nil {
 				res, ok := err.(*echo.HTTPError)
 
-				require.NotNil(t, ok)
+				require.True(t, ok)
 				assert.Equal(t, test.want.code, res.Code)
 			} else {
 				res := rec.Result()
@@ -514,7 +516,7 @@ func TestURLShortener_HandleUserURLGet(t *testing.T) {
 	repository := new(models2.URLRepository)
 	authService := new(auth.AuthServiceInterface)
 
-	shortener := app.NewURLShortener(repository, mockConn, authService)
+	shortener := app.NewURLShortener(repository, mockConn, authService, nil)
 
 	e := echo.New()
 
@@ -537,7 +539,7 @@ func TestURLShortener_HandleUserURLGet(t *testing.T) {
 			if err != nil {
 				res, ok := err.(*echo.HTTPError)
 
-				require.NotNil(t, ok)
+				require.True(t, ok)
 				assert.Equal(t, code, res.Code)
 			} else {
 				res := rec.Result()
@@ -591,7 +593,7 @@ func TestURLShortener_HandleUserURLDelete(t *testing.T) {
 	repository := new(models2.URLRepository)
 	authService := new(auth.AuthServiceInterface)
 
-	shortener := app.NewURLShortener(repository, mockConn, authService)
+	shortener := app.NewURLShortener(repository, mockConn, authService, nil)
 
 	e := echo.New()
 
@@ -620,13 +622,118 @@ func TestURLShortener_HandleUserURLDelete(t *testing.T) {
 			if err != nil {
 				res, ok := err.(*echo.HTTPError)
 
-				require.NotNil(t, ok)
+				require.True(t, ok)
 				assert.Equal(t, code, res.Code)
 			} else {
 				res := rec.Result()
 				defer res.Body.Close()
 
 				assert.Equal(t, code, res.StatusCode)
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestURLShortener_HandleGetStats(t *testing.T) {
+	mockConn, err := pgxmock.NewConn()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mockConn.Close(context.Background())
+
+	type want struct {
+		code       int
+		countUsers int
+		countURLs  int
+		error      error
+	}
+	type args struct {
+		IP string
+	}
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "positive test #1",
+			args: args{
+				IP: "127.0.0.1",
+			},
+			want: want{
+				code:       200,
+				countUsers: 1,
+				countURLs:  2,
+			},
+		},
+		{
+			name: "negative test #1",
+			args: args{},
+			want: want{
+				code: 403,
+			},
+		},
+		{
+			name: "negative test #2",
+			args: args{
+				IP: "127.0.0.1",
+			},
+			want: want{
+				code:  500,
+				error: errors.New("test error"),
+			},
+		},
+	}
+
+	repository := new(models2.URLRepository)
+	authService := new(auth.AuthServiceInterface)
+	_, subnet, err := net.ParseCIDR("127.0.0.1/24")
+	if err != nil {
+		t.Error(err)
+	}
+
+	shortener := app.NewURLShortener(repository, mockConn, authService, subnet)
+
+	e := echo.New()
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			if test.args.IP != "" {
+				req.Header.Set("X-Real-IP", test.args.IP)
+			}
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+
+			repository.ExpectedCalls = nil
+			repository.EXPECT().GetStats(c.Request().Context()).Return(test.want.countUsers, test.want.countURLs, test.want.error)
+
+			err := shortener.HandleGetStats(c)
+
+			// Assertions
+			if err != nil {
+				var res *echo.HTTPError
+				ok := errors.As(err, &res)
+
+				require.True(t, ok)
+				assert.Equal(t, test.want.code, res.Code)
+			} else {
+				res := rec.Result()
+				defer res.Body.Close()
+
+				if res.StatusCode < http.StatusMultipleChoices {
+					body := rec.Body.Bytes()
+					var data struct {
+						URLs  int `json:"urls"`
+						Users int `json:"users"`
+					}
+					require.NoError(t, json.Unmarshal(body, &data))
+					assert.Equal(t, test.want.countUsers, data.Users)
+					assert.Equal(t, test.want.countURLs, data.URLs)
+				}
+
+				assert.Equal(t, test.want.code, res.StatusCode)
 				require.NoError(t, err)
 			}
 		})
@@ -666,7 +773,7 @@ func TestURLShortener_Shutdown(t *testing.T) {
 	authService := new(auth.AuthServiceInterface)
 
 	for _, test := range tests {
-		shortener := app.NewURLShortener(repository, mockConn, authService)
+		shortener := app.NewURLShortener(repository, mockConn, authService, nil)
 
 		t.Run(test.name, func(t *testing.T) {
 			if len(test.args.events) > 0 {

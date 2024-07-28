@@ -63,9 +63,14 @@ func TestMemoryURLRepository_CRUD(t *testing.T) {
 		length   int
 		events   []models.Event
 	}
+	type want struct {
+		countUsers int
+		countURLs  int
+	}
 	tests := []struct {
 		name string
 		args args
+		want want
 	}{
 		{
 			name: "positive test #1",
@@ -89,6 +94,10 @@ func TestMemoryURLRepository_CRUD(t *testing.T) {
 						UserID:      "3",
 					},
 				},
+			},
+			want: want{
+				countUsers: 4,
+				countURLs:  4,
 			},
 		},
 	}
@@ -147,6 +156,11 @@ func TestMemoryURLRepository_CRUD(t *testing.T) {
 				assert.True(t, found)
 				assert.True(t, getEvent.DeletedFlag)
 			}
+
+			countUsers, countURLs, err := repository.GetStats(context.TODO())
+			assert.Equal(t, tt.want.countUsers, countUsers)
+			assert.Equal(t, tt.want.countURLs, countURLs)
+			assert.Nil(t, err)
 		})
 	}
 }

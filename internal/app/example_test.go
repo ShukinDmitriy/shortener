@@ -42,7 +42,7 @@ func Example() {
 		panic(err)
 	}
 	authService := auth.NewAuthService()
-	shortener := app.NewURLShortener(repository, nil, authService)
+	shortener := app.NewURLShortener(repository, nil, authService, nil)
 
 	e := echo.New()
 	stringBody, _ := json.Marshal(body)

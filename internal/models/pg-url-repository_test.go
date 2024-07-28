@@ -59,11 +59,16 @@ func TestPGURLRepository_CRUD(t *testing.T) {
 		dsn    string
 		events []models.Event
 	}
+	type want struct {
+		countUsers int
+		countURLs  int
+	}
 	eventShortKey := models.GenerateShortKey()
 	repeatShortKey := models.GenerateShortKey()
 	tests := []struct {
 		name string
 		args args
+		want want
 	}{
 		{
 			name: "positive test #1",
@@ -87,6 +92,10 @@ func TestPGURLRepository_CRUD(t *testing.T) {
 					},
 				},
 			},
+			want: want{
+				countUsers: 2,
+				countURLs:  2,
+			},
 		},
 	}
 
@@ -101,6 +110,11 @@ func TestPGURLRepository_CRUD(t *testing.T) {
 			assert.NoError(t, repository.Initialize(configuration))
 
 			originalURLs := make(map[string]bool, 3)
+
+			countUsersBefore, countURLsBefore, err := repository.GetStats(context.TODO())
+			if err != nil {
+				t.Error(err)
+			}
 
 			for _, event := range tt.args.events {
 				// notExpectedFound ожидается ли в бд такое событие
@@ -145,6 +159,11 @@ func TestPGURLRepository_CRUD(t *testing.T) {
 					assert.True(t, getEvent.DeletedFlag)
 				}
 			}
+
+			countUsers, countURLs, err := repository.GetStats(context.TODO())
+			assert.Equal(t, tt.want.countUsers, countUsers-countUsersBefore)
+			assert.Equal(t, tt.want.countURLs, countURLs-countURLsBefore)
+			assert.Nil(t, err)
 		})
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"reflect"
 	"time"
@@ -33,6 +34,9 @@ type URLShortener struct {
 
 	// канал для уведомления об окончании работы
 	shutdownChan chan chan struct{}
+
+	// разрешенная подсеть
+	subnet *net.IPNet
 }
 
 // NewURLShortener application's constructor
@@ -40,6 +44,7 @@ func NewURLShortener(
 	urlRepository models.URLRepository,
 	conn PgxConnPinger,
 	authService auth.AuthServiceInterface,
+	subnet *net.IPNet,
 ) *URLShortener {
 	instance := &URLShortener{
 		URLRepository: urlRepository,
@@ -47,6 +52,7 @@ func NewURLShortener(
 		authService:   authService,
 		eDeletedEvent: make(chan models.DeleteRequestBatch, 100),
 		shutdownChan:  make(chan chan struct{}),
+		subnet:        subnet,
 	}
 
 	go instance.deleteEvents()
@@ -294,6 +300,30 @@ func (us *URLShortener) HandleUserURLDelete(ctx echo.Context) error {
 	us.eDeletedEvent <- req
 
 	return ctx.JSON(http.StatusAccepted, "Accepted")
+}
+
+// HandleGetStats handler for get service stats
+func (us *URLShortener) HandleGetStats(ctx echo.Context) error {
+	// Проверяем доступ
+	xRealIPHeader := ctx.Request().Header.Get("X-Real-IP")
+	ip := net.ParseIP(xRealIPHeader)
+	if us.subnet == nil || !us.subnet.Contains(ip) {
+		return ctx.JSON(http.StatusForbidden, http.NoBody)
+	}
+
+	countUser, countURL, err := us.URLRepository.GetStats(ctx.Request().Context())
+	if err != nil {
+		ctx.Logger().Error(err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal Server Error")
+	}
+
+	return ctx.JSON(http.StatusOK, struct {
+		URLs  int `json:"urls"`
+		Users int `json:"users"`
+	}{
+		URLs:  countURL,
+		Users: countUser,
+	})
 }
 
 // Shutdown function
