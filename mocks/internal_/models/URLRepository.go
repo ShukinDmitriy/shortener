@@ -232,6 +232,69 @@ func (_c *URLRepository_GetShortKeyByOriginalURL_Call) RunAndReturn(run func(str
 	return _c
 }
 
+// GetStats provides a mock function with given fields: ctx
+func (_m *URLRepository) GetStats(ctx context.Context) (int, int, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetStats")
+	}
+
+	var r0 int
+	var r1 int
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context) (int, int, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) int); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) int); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Get(1).(int)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context) error); ok {
+		r2 = rf(ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// URLRepository_GetStats_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetStats'
+type URLRepository_GetStats_Call struct {
+	*mock.Call
+}
+
+// GetStats is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *URLRepository_Expecter) GetStats(ctx interface{}) *URLRepository_GetStats_Call {
+	return &URLRepository_GetStats_Call{Call: _e.mock.On("GetStats", ctx)}
+}
+
+func (_c *URLRepository_GetStats_Call) Run(run func(ctx context.Context)) *URLRepository_GetStats_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *URLRepository_GetStats_Call) Return(countUser int, countURL int, err error) *URLRepository_GetStats_Call {
+	_c.Call.Return(countUser, countURL, err)
+	return _c
+}
+
+func (_c *URLRepository_GetStats_Call) RunAndReturn(run func(context.Context) (int, int, error)) *URLRepository_GetStats_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Initialize provides a mock function with given fields: configuration
 func (_m *URLRepository) Initialize(configuration environments.Configuration) error {
 	ret := _m.Called(configuration)

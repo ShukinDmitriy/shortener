@@ -19,6 +19,7 @@ type configFile struct {
 	FileStoragePath string `json:"file_storage_path"`
 	DatabaseDSN     string `json:"database_dsn"`
 	EnableHTTPS     bool   `json:"enable_https"`
+	TrustedSubnet   string `json:"trusted_subnet"`
 }
 
 // getConfigFromFile Чтение конфигурации из файла
@@ -50,6 +51,7 @@ type Configuration struct {
 	FileStoragePath string
 	DatabaseDSN     string
 	EnableHTTPS     bool
+	TrustedSubnet   string
 }
 
 // flagConfig содержит путь к файлу конфигурации в формате JSON
@@ -73,8 +75,11 @@ var flagFileStoragePath string
 // flagDatabaseDSN содержит путь до бд
 var flagDatabaseDSN string
 
-// enableHTTPS включен ли HTTPS
-var enableHTTPS bool
+// flagEnableHTTPS включен ли HTTPS
+var flagEnableHTTPS bool
+
+// flagTrustedSubnet строковое представление бесклассовой адресации
+var flagTrustedSubnet string
 
 // ParseFlags обрабатывает аргументы командной строки
 // и сохраняет их значения в соответствующих переменных
@@ -121,10 +126,16 @@ func ParseFlags() Configuration {
 		flag.StringVar(&flagDatabaseDSN, "d", "", "database DSN")
 	}
 
-	// регистрируем переменную enableHTTPS
+	// регистрируем переменную flagEnableHTTPS
 	// как аргумент -s с ложным значением по умолчанию
 	if flag.Lookup("s") == nil {
-		flag.Bool("s", enableHTTPS, "enable https")
+		flag.BoolVar(&flagEnableHTTPS, "s", false, "enable https")
+	}
+
+	// регистрируем переменную flagEnableHTTPS
+	// как аргумент -t с пустым значением по умолчанию
+	if flag.Lookup("t") == nil {
+		flag.StringVar(&flagTrustedSubnet, "t", "", "CIDR")
 	}
 
 	// парсим переданные серверу аргументы в зарегистрированные переменные
@@ -180,7 +191,14 @@ func ParseFlags() Configuration {
 	// переопределим включение HTTPS,
 	// даже если он был передан через аргумент командной строки
 	if envEnableHTTPS, isExist := os.LookupEnv("ENABLE_HTTPS"); isExist {
-		enableHTTPS = envEnableHTTPS == "true" || envEnableHTTPS == "1"
+		flagEnableHTTPS = envEnableHTTPS == "true" || envEnableHTTPS == "1"
+	}
+
+	// для случаев, когда в переменной окружения TRUSTED_SUBNET присутствует значение,
+	// переопределим строковое представление бесклассовой адресации,
+	// даже если он был передан через аргумент командной строки
+	if envTrustedSubnet, isExist := os.LookupEnv("TRUSTED_SUBNET"); isExist {
+		flagTrustedSubnet = envTrustedSubnet
 	}
 
 	fileConfig := configFile{}
@@ -206,8 +224,11 @@ func ParseFlags() Configuration {
 	if configuration.DatabaseDSN = flagDatabaseDSN; configuration.DatabaseDSN == "" {
 		configuration.DatabaseDSN = fileConfig.DatabaseDSN
 	}
-	if configuration.EnableHTTPS = enableHTTPS; !configuration.EnableHTTPS {
+	if configuration.EnableHTTPS = flagEnableHTTPS; !configuration.EnableHTTPS {
 		configuration.EnableHTTPS = fileConfig.EnableHTTPS
+	}
+	if configuration.TrustedSubnet = flagTrustedSubnet; configuration.TrustedSubnet == "" {
+		configuration.TrustedSubnet = fileConfig.TrustedSubnet
 	}
 
 	return configuration

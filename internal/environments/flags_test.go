@@ -24,6 +24,7 @@ func TestParseFlagsFromJSON(t *testing.T) {
 		"file_storage_path": "/tmp/short-url-db.json",
 		"database_dsn":      "postgres://user:password@host:port/dbname",
 		"enable_https":      true,
+		"trusted_subnet":    "127.0.0.1/24",
 	}
 	data, err := json.Marshal(conf)
 	if err != nil {
@@ -46,6 +47,7 @@ func TestParseFlagsFromJSON(t *testing.T) {
 	assert.Equal(t, "/tmp/short-url-db.json", configuration.FileStoragePath)
 	assert.Equal(t, "postgres://user:password@host:port/dbname", configuration.DatabaseDSN)
 	assert.Equal(t, true, configuration.EnableHTTPS)
+	assert.Equal(t, "127.0.0.1/24", configuration.TrustedSubnet)
 
 	// Очистка переменных окружения
 	os.Unsetenv("CONFIG")
@@ -59,6 +61,7 @@ func TestParseFlags(t *testing.T) {
 	os.Setenv("FILE_STORAGE_PATH", "/tmp/short-url-db.json")
 	os.Setenv("DATABASE_DSN", "postgres://user:password@host:port/dbname")
 	os.Setenv("ENABLE_HTTPS", "true")
+	os.Setenv("TRUSTED_SUBNET", "127.0.0.1/24")
 
 	// Вызов функции ParseFlags
 	configuration := environments.ParseFlags()
@@ -70,6 +73,7 @@ func TestParseFlags(t *testing.T) {
 	assert.Equal(t, "/tmp/short-url-db.json", configuration.FileStoragePath)
 	assert.Equal(t, "postgres://user:password@host:port/dbname", configuration.DatabaseDSN)
 	assert.Equal(t, true, configuration.EnableHTTPS)
+	assert.Equal(t, "127.0.0.1/24", configuration.TrustedSubnet)
 
 	// Очистка переменных окружения
 	os.Unsetenv("SERVER_ADDRESS")
@@ -77,4 +81,5 @@ func TestParseFlags(t *testing.T) {
 	os.Unsetenv("LOG_LEVEL")
 	os.Unsetenv("FILE_STORAGE_PATH")
 	os.Unsetenv("DATABASE_DSN")
+	os.Unsetenv("TRUSTED_SUBNET")
 }
