@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"strings"
 
+	"github.com/ShukinDmitriy/shortener/internal/environments"
+
 	"github.com/ShukinDmitriy/shortener/internal/app"
 	"github.com/ShukinDmitriy/shortener/internal/auth"
 	"github.com/ShukinDmitriy/shortener/internal/models"
@@ -34,7 +36,8 @@ func Example() {
 	}
 
 	repository := &models.MemoryURLRepository{}
-	err := repository.Initialize()
+	configuration := environments.Configuration{}
+	err := repository.Initialize(configuration)
 	if err != nil {
 		panic(err)
 	}

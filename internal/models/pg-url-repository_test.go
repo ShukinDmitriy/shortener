@@ -36,12 +36,13 @@ func TestPGURLRepository_Initialize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			configuration := environments.Configuration{}
 			if tt.args.dsn != "" {
-				environments.FlagDatabaseDSN = tt.args.dsn
+				configuration.DatabaseDSN = tt.args.dsn
 			}
 
 			repository := &models.PGURLRepository{}
-			assert.NoError(t, repository.Initialize())
+			assert.NoError(t, repository.Initialize(configuration))
 		})
 	}
 }
@@ -91,12 +92,13 @@ func TestPGURLRepository_CRUD(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			configuration := environments.Configuration{}
 			if tt.args.dsn != "" {
-				environments.FlagDatabaseDSN = tt.args.dsn
+				configuration.DatabaseDSN = tt.args.dsn
 			}
 
 			repository := &models.PGURLRepository{}
-			assert.NoError(t, repository.Initialize())
+			assert.NoError(t, repository.Initialize(configuration))
 
 			originalURLs := make(map[string]bool, 3)
 

@@ -15,10 +15,11 @@ import (
 
 func BenchmarkMemoryURLRepository_Initialize(b *testing.B) {
 	repository := &models.MemoryURLRepository{}
+	configuration := environments.Configuration{}
 
 	b.Run("initialize", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_ = repository.Initialize()
+			_ = repository.Initialize(configuration)
 		}
 	})
 }
@@ -41,12 +42,13 @@ func TestMemoryURLRepository_Initialize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			configuration := environments.Configuration{}
 			if tt.args.filename != "" {
-				environments.FlagFileStoragePath = tt.args.filename
+				configuration.FileStoragePath = tt.args.filename
 			}
 
 			repository := &models.MemoryURLRepository{}
-			assert.NoError(t, repository.Initialize())
+			assert.NoError(t, repository.Initialize(configuration))
 			if tt.args.filename != "" {
 				assert.FileExists(t, tt.args.filename)
 				_ = os.Remove(tt.args.filename)
@@ -93,8 +95,10 @@ func TestMemoryURLRepository_CRUD(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			configuration := environments.Configuration{}
+
 			if tt.args.filename != "" {
-				environments.FlagFileStoragePath = tt.args.filename
+				configuration.FileStoragePath = tt.args.filename
 				defer os.Remove(tt.args.filename)
 
 				content := ""
@@ -111,7 +115,7 @@ func TestMemoryURLRepository_CRUD(t *testing.T) {
 			}
 
 			repository := &models.MemoryURLRepository{}
-			assert.NoError(t, repository.Initialize())
+			assert.NoError(t, repository.Initialize(configuration))
 			assert.Equal(t, tt.args.length, len(repository.GetEventsByUserID(context.TODO(), "0")))
 
 			for _, event := range tt.args.events {

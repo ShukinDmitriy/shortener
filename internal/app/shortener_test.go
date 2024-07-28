@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ShukinDmitriy/shortener/internal/environments"
+
 	"github.com/ShukinDmitriy/shortener/internal/app"
 	"github.com/ShukinDmitriy/shortener/internal/models"
 	"github.com/ShukinDmitriy/shortener/mocks/internal_/auth"
@@ -52,7 +54,8 @@ func TestURLShortener_HandleShorten(t *testing.T) {
 	}
 
 	repository := &models.MemoryURLRepository{}
-	err := repository.Initialize()
+	configuration := environments.Configuration{}
+	err := repository.Initialize(configuration)
 	require.NoError(t, err)
 	authService := new(auth.AuthServiceInterface)
 
@@ -144,7 +147,8 @@ func TestURLShortener_HandleCreateShorten(t *testing.T) {
 	}
 
 	repository := &models.MemoryURLRepository{}
-	err := repository.Initialize()
+	configuration := environments.Configuration{}
+	err := repository.Initialize(configuration)
 	require.NoError(t, err)
 	authService := new(auth.AuthServiceInterface)
 
@@ -230,7 +234,8 @@ func TestURLShortener_HandleCreateShortenBatch(t *testing.T) {
 	}
 
 	repository := &models.MemoryURLRepository{}
-	err := repository.Initialize()
+	configuration := environments.Configuration{}
+	err := repository.Initialize(configuration)
 	require.NoError(t, err)
 	authService := new(auth.AuthServiceInterface)
 
@@ -318,7 +323,8 @@ func TestURLShortener_HandleRedirect(t *testing.T) {
 	}
 
 	repository := &models.MemoryURLRepository{}
-	err := repository.Initialize()
+	configuration := environments.Configuration{}
+	err := repository.Initialize(configuration)
 	require.NoError(t, err)
 	authService := new(auth.AuthServiceInterface)
 

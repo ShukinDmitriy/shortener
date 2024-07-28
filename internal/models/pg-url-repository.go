@@ -27,18 +27,18 @@ type PGURLRepository struct {
 }
 
 // Initialize repository
-func (r *PGURLRepository) Initialize() error {
+func (r *PGURLRepository) Initialize(configuration environments.Configuration) error {
 	cont := context.Background()
 	var pool *pgxpool.Pool
 	var err error
 
-	pool, err = pgxpool.New(cont, environments.FlagDatabaseDSN)
+	pool, err = pgxpool.New(cont, configuration.DatabaseDSN)
 	if err != nil {
 		return err
 	}
 	r.pool = pool
 
-	db, err := sql.Open("postgres", environments.FlagDatabaseDSN)
+	db, err := sql.Open("postgres", configuration.DatabaseDSN)
 	if err != nil {
 		zap.L().Error("can't connect to db", zap.String("err", err.Error()))
 		return err

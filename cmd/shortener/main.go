@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/ShukinDmitriy/shortener/internal/app"
@@ -36,16 +37,16 @@ var (
 	buildCommit = "N/A"
 )
 
-func urlRepositoryFactory() (models.URLRepository, error) {
+func urlRepositoryFactory(configuration environments.Configuration) (models.URLRepository, error) {
 	var repository models.URLRepository
 
-	if environments.FlagDatabaseDSN != "" {
+	if configuration.DatabaseDSN != "" {
 		repository = &models.PGURLRepository{}
 	} else {
 		repository = &models.MemoryURLRepository{}
 	}
 
-	err := repository.Initialize()
+	err := repository.Initialize(configuration)
 	if err != nil {
 		return nil, err
 	}
@@ -61,21 +62,21 @@ func main() {
 	// Профилирование
 	runProf()
 
-	environments.ParseFlags()
+	configuration := environments.ParseFlags()
 
-	if err := logger.Initialize(environments.FlagLogLevel); err != nil {
+	if err := logger.Initialize(configuration.LogLevel); err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	repository, err := urlRepositoryFactory()
+	repository, err := urlRepositoryFactory(configuration)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	// urlExample := "postgres://username:password@localhost:5432/database_name"
-	conn, err := pgx.Connect(context.Background(), environments.FlagDatabaseDSN)
+	conn, err := pgx.Connect(context.Background(), configuration.DatabaseDSN)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 	} else {
@@ -165,18 +166,24 @@ func main() {
 	}))
 	e.Use(auth.TokenRefreshMiddleware)
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer stop()
 	// Start server
 	go func() {
-		if err := e.Start(environments.FlagRunAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			e.Logger.Fatal("shutting down the server")
+		if configuration.EnableHTTPS {
+			if err := e.StartTLS(configuration.RunAddr, "ssl/localhost.crt", "ssl/device.key"); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				e.Logger.Fatal("shutting down the server")
+			}
+		} else {
+			if err := e.Start(configuration.RunAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				e.Logger.Fatal("shutting down the server")
+			}
 		}
 
-		zap.L().Info("Running server", zap.String("address", environments.FlagRunAddr))
+		zap.L().Info("Running server", zap.String("address", configuration.RunAddr))
 	}()
 
 	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 10 seconds.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	defer stop()
 	<-ctx.Done()
 
 	// Запускаем остановку
