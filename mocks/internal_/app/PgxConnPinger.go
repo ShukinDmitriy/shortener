@@ -21,6 +21,52 @@ func (_m *PgxConnPinger) EXPECT() *PgxConnPinger_Expecter {
 	return &PgxConnPinger_Expecter{mock: &_m.Mock}
 }
 
+// Close provides a mock function with given fields: _a0
+func (_m *PgxConnPinger) Close(_a0 context.Context) error {
+	ret := _m.Called(_a0)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Close")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// PgxConnPinger_Close_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Close'
+type PgxConnPinger_Close_Call struct {
+	*mock.Call
+}
+
+// Close is a helper method to define mock.On call
+//   - _a0 context.Context
+func (_e *PgxConnPinger_Expecter) Close(_a0 interface{}) *PgxConnPinger_Close_Call {
+	return &PgxConnPinger_Close_Call{Call: _e.mock.On("Close", _a0)}
+}
+
+func (_c *PgxConnPinger_Close_Call) Run(run func(_a0 context.Context)) *PgxConnPinger_Close_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *PgxConnPinger_Close_Call) Return(_a0 error) *PgxConnPinger_Close_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *PgxConnPinger_Close_Call) RunAndReturn(run func(context.Context) error) *PgxConnPinger_Close_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Ping provides a mock function with given fields: _a0
 func (_m *PgxConnPinger) Ping(_a0 context.Context) error {
 	ret := _m.Called(_a0)

@@ -25,3 +25,6 @@ vendor/
 
 # environments
 .env
+
+# protobuf
+proto/*.pb.go

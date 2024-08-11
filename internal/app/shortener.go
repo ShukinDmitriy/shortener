@@ -20,6 +20,7 @@ import (
 // PgxConnPinger interface for checking connection to the database
 type PgxConnPinger interface {
 	Ping(context.Context) error
+	Close(context.Context) error
 }
 
 // URLShortener the application
@@ -90,7 +91,7 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 	if errors.Is(err, models.ErrURLExist) {
 		ctx.Logger().Error(err)
 		shortKey = events[0].ShortKey
-		return ctx.String(http.StatusConflict, models.PrepareFullURL(ctx, shortKey))
+		return ctx.String(http.StatusConflict, models.PrepareFullURL(shortKey, ctx.Request().Host))
 	}
 
 	if err != nil {
@@ -98,7 +99,7 @@ func (us *URLShortener) HandleShorten(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "can't save url. internal error1"+err.Error())
 	}
 
-	result := models.PrepareFullURL(ctx, shortKey)
+	result := models.PrepareFullURL(shortKey, ctx.Request().Host)
 
 	ctx.Response().Header().Set("Content-Type", "text/plain; charset=utf-8")
 
@@ -150,7 +151,7 @@ func (us *URLShortener) HandleCreateShorten(ctx echo.Context) error {
 
 	// заполняем модель ответа
 	resp := models.CreateResponse{
-		Result: models.PrepareFullURL(ctx, shortKey),
+		Result: models.PrepareFullURL(shortKey, ctx.Request().Host),
 	}
 
 	return ctx.JSON(status, resp)
@@ -212,7 +213,7 @@ func (us *URLShortener) HandleCreateShortenBatch(ctx echo.Context) error {
 	for i, event := range events {
 		resp[i] = models.CreateResponseBatch{
 			CorrelationID: event.CorrelationID,
-			ShortURL:      models.PrepareFullURL(ctx, event.ShortKey),
+			ShortURL:      models.PrepareFullURL(event.ShortKey, ctx.Request().Host),
 		}
 	}
 
@@ -273,7 +274,7 @@ func (us *URLShortener) HandleUserURLGet(ctx echo.Context) error {
 
 	for i, event := range events {
 		resp[i] = models.GetUserURLsResponse{
-			ShortURL:    models.PrepareFullURL(ctx, event.ShortKey),
+			ShortURL:    models.PrepareFullURL(event.ShortKey, ctx.Request().Host),
 			OriginalURL: event.OriginalURL,
 		}
 	}

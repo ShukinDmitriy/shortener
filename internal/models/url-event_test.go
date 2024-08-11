@@ -66,7 +66,7 @@ func TestPrepareFullURL(t *testing.T) {
 				environments.BaseAddr = tt.args.baseAddr
 			}
 
-			if got := PrepareFullURL(tt.args.ctx, tt.args.shortKey); got != tt.want {
+			if got := PrepareFullURL(tt.args.shortKey, tt.args.ctx.Request().Host); got != tt.want {
 				t.Errorf("PrepareFullURL() = %v, want %v", got, tt.want)
 			}
 		})

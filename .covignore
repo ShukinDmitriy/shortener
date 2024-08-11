@@ -6,4 +6,9 @@ github.com/ShukinDmitriy/shortener/mocks/internal_/app/PgxConnPinger.go
 github.com/ShukinDmitriy/shortener/mocks/internal_/auth/AuthServiceInterface.go
 github.com/ShukinDmitriy/shortener/mocks/internal_/logger/Logger.go
 github.com/ShukinDmitriy/shortener/mocks/internal_/models/URLRepository.go
+github.com/ShukinDmitriy/shortener/mocks/proto/URLClient.go
+github.com/ShukinDmitriy/shortener/mocks/proto/URLServer.go
+github.com/ShukinDmitriy/shortener/mocks/proto/UnsafeURLServer.go
+github.com/ShukinDmitriy/shortener/proto/shortener.pb.go
+github.com/ShukinDmitriy/shortener/proto/shortener_grpc.pb.go
 github.com/ShukinDmitriy/shortener/test_spec.go

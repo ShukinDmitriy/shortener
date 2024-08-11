@@ -6,6 +6,7 @@ import (
 	"flag"
 	"io"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/gommon/log"
@@ -20,6 +21,7 @@ type configFile struct {
 	DatabaseDSN     string `json:"database_dsn"`
 	EnableHTTPS     bool   `json:"enable_https"`
 	TrustedSubnet   string `json:"trusted_subnet"`
+	GrpcPort        int    `json:"grpc_port"`
 }
 
 // getConfigFromFile Чтение конфигурации из файла
@@ -52,6 +54,7 @@ type Configuration struct {
 	DatabaseDSN     string
 	EnableHTTPS     bool
 	TrustedSubnet   string
+	GrpcPort        int
 }
 
 // flagConfig содержит путь к файлу конфигурации в формате JSON
@@ -80,6 +83,9 @@ var flagEnableHTTPS bool
 
 // flagTrustedSubnet строковое представление бесклассовой адресации
 var flagTrustedSubnet string
+
+// flagGrpcPort порт для запуска grpc
+var flagGrpcPort int
 
 // ParseFlags обрабатывает аргументы командной строки
 // и сохраняет их значения в соответствующих переменных
@@ -132,10 +138,16 @@ func ParseFlags() Configuration {
 		flag.BoolVar(&flagEnableHTTPS, "s", false, "enable https")
 	}
 
-	// регистрируем переменную flagEnableHTTPS
+	// регистрируем переменную flagTrustedSubnet
 	// как аргумент -t с пустым значением по умолчанию
 	if flag.Lookup("t") == nil {
 		flag.StringVar(&flagTrustedSubnet, "t", "", "CIDR")
+	}
+
+	// регистрируем переменную flagGrpcPort
+	// как аргумент -g со значением по умолчанию 5050
+	if flag.Lookup("g") == nil {
+		flag.IntVar(&flagGrpcPort, "g", 5050, "gRPC port")
 	}
 
 	// парсим переданные серверу аргументы в зарегистрированные переменные
@@ -201,6 +213,13 @@ func ParseFlags() Configuration {
 		flagTrustedSubnet = envTrustedSubnet
 	}
 
+	// для случаев, когда в переменной окружения GRPC_PORT присутствует значение,
+	// переопределим порт для старта GRPC,
+	// даже если он был передан через аргумент командной строки
+	if envGrpcPort, isExist := os.LookupEnv("GRPC_PORT"); isExist {
+		flagGrpcPort, _ = strconv.Atoi(envGrpcPort)
+	}
+
 	fileConfig := configFile{}
 	if flagConfig != "" {
 		fileConfig = getConfigFromFile(flagConfig)
@@ -229,6 +248,9 @@ func ParseFlags() Configuration {
 	}
 	if configuration.TrustedSubnet = flagTrustedSubnet; configuration.TrustedSubnet == "" {
 		configuration.TrustedSubnet = fileConfig.TrustedSubnet
+	}
+	if configuration.GrpcPort = flagGrpcPort; configuration.GrpcPort == 0 {
+		configuration.GrpcPort = fileConfig.GrpcPort
 	}
 
 	return configuration
