@@ -3,6 +3,10 @@ package app_test
 import (
 	"context"
 	"errors"
+	"log"
+	"net"
+	"testing"
+
 	"github.com/ShukinDmitriy/shortener/internal/app"
 	"github.com/ShukinDmitriy/shortener/internal/environments"
 	"github.com/ShukinDmitriy/shortener/internal/models"
@@ -14,9 +18,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
-	"log"
-	"net"
-	"testing"
 )
 
 func dialer(shortenerGRPC *app.URLShortenerGRPC) func(context.Context, string) (net.Conn, error) {

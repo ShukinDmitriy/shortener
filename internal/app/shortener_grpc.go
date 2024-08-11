@@ -3,10 +3,11 @@ package app
 import (
 	"context"
 	"errors"
+	"net"
+
 	"github.com/ShukinDmitriy/shortener/internal/models"
 	pb "github.com/ShukinDmitriy/shortener/proto"
 	"go.uber.org/zap"
-	"net"
 )
 
 // URLShortenerGRPC the application
@@ -74,7 +75,6 @@ func (us *URLShortenerGRPC) Create(ctx context.Context, req *pb.CreateRequest) (
 		Status:      status,
 		ResponseUrl: models.PrepareFullURL(shortKey, ""),
 	}, nil
-
 }
 
 func (us *URLShortenerGRPC) CreateBatch(ctx context.Context, req *pb.CreateBatchRequest) (*pb.CreateBatchResponse, error) {
