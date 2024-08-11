@@ -177,7 +177,8 @@ func main() {
 	// Start gRPC
 	var grpcServer *grpc.Server
 	ctx, cancel := context.WithCancel(context.Background())
-	g, ctx := errgroup.WithContext(ctx)
+	defer cancel()
+	g, _ := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", configuration.GrpcPort))
 		if err != nil {

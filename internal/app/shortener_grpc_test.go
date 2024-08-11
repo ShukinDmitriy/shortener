@@ -37,13 +37,6 @@ func dialer(shortenerGRPC *app.URLShortenerGRPC) func(context.Context, string) (
 	}
 }
 
-// хотя grpc.DialContext deprecated, но не понял как сделать через grpc.NewClient
-//conn, err := grpc.NewClient(
-//	"", //"bufnet",
-//	grpc.WithTransportCredentials(insecure.NewCredentials()),
-//	grpc.WithContextDialer(dialer()),
-//)
-
 func TestURLShortenerGRPC_Create(t *testing.T) {
 	type want struct {
 		status   string
@@ -103,9 +96,8 @@ func TestURLShortenerGRPC_Create(t *testing.T) {
 	shortenerGRPC := app.NewURLShortenerGRPC(repository, mockConn, subnet)
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx,
-		"",
+	conn, err := grpc.NewClient(
+		"passthrough://bufnet",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(dialer(shortenerGRPC)),
 	)
@@ -243,9 +235,8 @@ func TestURLShortenerGRPC_CreateBatch(t *testing.T) {
 	shortenerGRPC := app.NewURLShortenerGRPC(repository, mockConn, subnet)
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx,
-		"",
+	conn, err := grpc.NewClient(
+		"passthrough://bufnet",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(dialer(shortenerGRPC)),
 	)
@@ -346,9 +337,8 @@ func TestURLShortenerGRPC_Redirect(t *testing.T) {
 	shortenerGRPC := app.NewURLShortenerGRPC(repository, mockConn, subnet)
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx,
-		"",
+	conn, err := grpc.NewClient(
+		"passthrough://bufnet",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(dialer(shortenerGRPC)),
 	)
@@ -425,9 +415,8 @@ func TestURLShortenerGRPC_GetUserURLs(t *testing.T) {
 	shortenerGRPC := app.NewURLShortenerGRPC(repository, mockConn, subnet)
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx,
-		"",
+	conn, err := grpc.NewClient(
+		"passthrough://bufnet",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(dialer(shortenerGRPC)),
 	)
@@ -491,9 +480,8 @@ func TestURLShortenerGRPC_DeleteBatch(t *testing.T) {
 	shortenerGRPC := app.NewURLShortenerGRPC(repository, mockConn, subnet)
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx,
-		"",
+	conn, err := grpc.NewClient(
+		"passthrough://bufnet",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(dialer(shortenerGRPC)),
 	)
@@ -577,9 +565,8 @@ func TestURLShortenerGRPC_GetStats(t *testing.T) {
 	shortenerGRPC := app.NewURLShortenerGRPC(repository, mockConn, subnet)
 
 	ctx := context.Background()
-	conn, err := grpc.DialContext(
-		ctx,
-		"",
+	conn, err := grpc.NewClient(
+		"passthrough://bufnet",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(dialer(shortenerGRPC)),
 	)
