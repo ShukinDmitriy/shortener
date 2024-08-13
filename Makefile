@@ -12,6 +12,11 @@ migrate-up:
 migrate-down:
 	migrate -database ${DATABASE_DSN} -path ./db/migrations down 1
 
+generate-proto:
+	protoc --go_out=. --go_opt=paths=source_relative \
+      --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+      proto/shortener.proto
+
 pprof-base:
 	go tool pprof -http=":9090" ./profiles/base.pprof
 

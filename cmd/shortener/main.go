@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -19,6 +20,7 @@ import (
 	"github.com/ShukinDmitriy/shortener/internal/logger"
 	internalMiddleware "github.com/ShukinDmitriy/shortener/internal/middleware"
 	"github.com/ShukinDmitriy/shortener/internal/models"
+	pb "github.com/ShukinDmitriy/shortener/proto"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
@@ -26,6 +28,8 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -84,8 +88,11 @@ func main() {
 	}
 
 	authService := auth.NewAuthService()
-
-	shortener := app.NewURLShortener(repository, conn, authService)
+	_, subnet, err := net.ParseCIDR(configuration.TrustedSubnet)
+	if err != nil {
+		fmt.Println(err)
+	}
+	shortener := app.NewURLShortener(repository, conn, authService, subnet)
 
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)
@@ -98,6 +105,7 @@ func main() {
 	e.GET("/ping", shortener.HandlePing)
 	e.GET("/api/user/urls", shortener.HandleUserURLGet)
 	e.DELETE("/api/user/urls", shortener.HandleUserURLDelete)
+	e.GET("/api/internal/stats", shortener.HandleGetStats)
 
 	//-------------------
 	// middleware
@@ -166,6 +174,23 @@ func main() {
 	}))
 	e.Use(auth.TokenRefreshMiddleware)
 
+	// Start gRPC
+	var grpcServer *grpc.Server
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	g, _ := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", configuration.GrpcPort))
+		if err != nil {
+			log.Printf("gRPC server failed to listen: %v", err.Error())
+			return err
+		}
+		grpcServer = grpc.NewServer()
+		shortenerGRPC := app.NewURLShortenerGRPC(repository, conn, subnet)
+		pb.RegisterURLServer(grpcServer, shortenerGRPC)
+		log.Printf("grpc server listening at %v", listener.Addr())
+		return grpcServer.Serve(listener)
+	})
 	// Start server
 	go func() {
 		if configuration.EnableHTTPS {
@@ -190,9 +215,13 @@ func main() {
 	shutdownChan := shortener.Shutdown()
 	<-shutdownChan
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := e.Shutdown(ctx); err != nil {
 		e.Logger.Fatal(err)
+	}
+
+	if grpcServer != nil {
+		grpcServer.GracefulStop()
 	}
 }

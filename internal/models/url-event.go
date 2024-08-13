@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/ShukinDmitriy/shortener/internal/environments"
-	"github.com/labstack/echo/v4"
 )
 
 // Event short link generation event structure
@@ -32,13 +31,13 @@ func GenerateShortKey() string {
 }
 
 // PrepareFullURL prepare full link
-func PrepareFullURL(ctx echo.Context, shortKey string) string {
+func PrepareFullURL(shortKey string, defaultHost string) string {
 	var host string
 
 	if environments.BaseAddr != "" {
 		host = environments.BaseAddr
 	} else {
-		host = "http://" + ctx.Request().Host
+		host = "http://" + defaultHost
 	}
 
 	return host + "/" + shortKey

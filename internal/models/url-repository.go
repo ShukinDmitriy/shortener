@@ -19,4 +19,6 @@ type URLRepository interface {
 	GetShortKeyByOriginalURL(originalURL string) (string, bool)
 
 	GetEventsByUserID(ctx context.Context, userID string) []*Event
+
+	GetStats(ctx context.Context) (countUser int, countURL int, err error)
 }
